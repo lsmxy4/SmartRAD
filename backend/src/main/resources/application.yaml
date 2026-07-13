@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: system
+  datasource:
+    url: jdbc:mysql://mysql:3306/tp_hr?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true
+    username: tp_hr_user
+    password: tp_hr_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  flyway:
+    enabled: false
