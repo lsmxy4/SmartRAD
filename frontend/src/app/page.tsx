@@ -5,6 +5,7 @@ import Header from "@/components/layout/Header";
 import Features from "@/components/sections/Features";
 import Hero from "@/components/sections/Hero";
 import Pricing from "@/components/sections/Pricing";
+import QuickMenu from "@/components/layout/QuickMenu";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
+      <QuickMenu />
     </>
   );
 }
