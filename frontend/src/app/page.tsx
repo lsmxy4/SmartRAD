@@ -1,5 +1,6 @@
 import Benefits from "@/components/sections/Benefits";
 import Contact from "@/components/sections/Contact";
+import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
 import Features from "@/components/sections/Features";
 import Hero from "@/components/sections/Hero";
@@ -16,6 +17,7 @@ export default function Home() {
         <Pricing />
         <Contact />
       </main>
+      <Footer />
     </>
   );
 }

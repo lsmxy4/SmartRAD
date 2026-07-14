@@ -1,21 +1,27 @@
-"use client";
+"use client"
 
-import Image from "next/image";
-import { useState } from "react";
-import Container from "@/components/ui/Container";
-import SectionBadge from "@/components/ui/SectionBadge";
+import Image from "next/image"
+import { useState } from "react"
+import Container from "@/components/ui/Container"
+import SectionBadge from "@/components/ui/SectionBadge"
 
 type Feature = {
-  number: string;
-  title: string;
-  summary: string;
-  previewTitle: string;
-  previewImage: string;
-  detailTitle: string;
-  detailDescription: string;
-  detailItems: string[];
-  stats: { value: string; label: string }[];
-};
+  number: string
+  title: string
+  summary: string
+  previewTitle: string
+  previewImage: string
+  detailTitle: string
+  detailDescription: string
+  detailItems: {
+    title: string
+    description: string
+  }[]
+  stats: {
+    value: string
+    label: string
+  }[]
+}
 
 const features: Feature[] = [
   {
@@ -28,7 +34,20 @@ const features: Feature[] = [
     detailTitle: "구성원 정보를 체계적으로 관리",
     detailDescription:
       "직원 기본 정보와 부서, 직급, 재직 상태를 한 화면에서 관리하고 필요한 정보를 빠르게 조회할 수 있습니다.",
-    detailItems: ["직원 정보 통합", "부서·직급 관리", "재직 상태 관리"],
+    detailItems: [
+      {
+        title: "직원 정보 통합",
+        description: "구성원의 기본 정보와 인사 이력을 한곳에서 관리합니다.",
+      },
+      {
+        title: "부서·직급 관리",
+        description: "조직 구조와 부서, 직급 체계를 체계적으로 설정합니다.",
+      },
+      {
+        title: "재직 상태 관리",
+        description: "재직, 휴직, 퇴직 상태를 구분해 빠르게 조회합니다.",
+      },
+    ],
     stats: [
       { value: "248명", label: "전체 직원" },
       { value: "12개", label: "운영 부서" },
@@ -38,14 +57,26 @@ const features: Feature[] = [
   {
     number: "02",
     title: "근태·휴가 관리",
-    summary:
-      "출퇴근 기록 연동과 휴가 신청, 승인 흐름을 간편하게 처리합니다.",
+    summary: "출퇴근 기록 연동과 휴가 신청, 승인 흐름을 간편하게 처리합니다.",
     previewTitle: "근태·휴가 관리 미리보기",
     previewImage: "/feature-attendance.svg",
     detailTitle: "근태와 휴가 흐름을 간편하게",
     detailDescription:
       "출퇴근 기록과 휴가 신청, 승인 상태를 한곳에서 확인하고 관리할 수 있습니다.",
-    detailItems: ["출퇴근 기록", "휴가 신청", "승인 상태 확인"],
+    detailItems: [
+      {
+        title: "출퇴근 기록",
+        description: "직원별 출근과 퇴근 시간을 자동으로 기록하고 관리합니다.",
+      },
+      {
+        title: "휴가 신청",
+        description: "휴가 신청부터 담당자의 승인까지 간편하게 처리합니다.",
+      },
+      {
+        title: "승인 상태 확인",
+        description: "신청, 승인, 반려 상태를 실시간으로 확인합니다.",
+      },
+    ],
     stats: [
       { value: "231명", label: "오늘 출근" },
       { value: "8명", label: "휴가자" },
@@ -62,37 +93,54 @@ const features: Feature[] = [
     detailTitle: "복잡한 급여 정산을 자동화",
     detailDescription:
       "근태 데이터를 기반으로 수당과 공제를 계산하고 급여명세서 발송까지 한 번에 처리합니다.",
-    detailItems: ["수당 자동 계산", "공제 항목 관리", "급여명세서 발송"],
+    detailItems: [
+      {
+        title: "수당 자동 계산",
+        description: "근태 기록을 기반으로 각종 수당을 자동 계산합니다.",
+      },
+      {
+        title: "공제 항목 관리",
+        description: "세금과 보험 등 공제 항목을 체계적으로 관리합니다.",
+      },
+      {
+        title: "급여명세서 발송",
+        description: "직원별 급여명세서를 생성하고 일괄 발송합니다.",
+      },
+    ],
     stats: [
       { value: "248명", label: "정산 대상" },
       { value: "100%", label: "자동 계산" },
       { value: "1일", label: "일괄 발송" },
     ],
   },
-];
+]
 
 export default function Features() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [failedImage, setFailedImage] = useState<string | null>(null);
-  const activeFeature = features[activeIndex];
-  const imageFailed = failedImage === activeFeature.previewImage;
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [failedImage, setFailedImage] = useState<string | null>(null)
+
+  const activeFeature = features[activeIndex]
+  const imageFailed = failedImage === activeFeature.previewImage
 
   return (
     <section id="features" className="w-full bg-white py-24 sm:py-32">
       <Container>
         <div className="text-center">
           <SectionBadge>주요 기능</SectionBadge>
+
           <h2 className="mt-5 text-[34px] font-extrabold tracking-[-2px] text-brand-navy sm:text-[44px] sm:tracking-[-3px]">
             인사관리 ERP의 핵심 기능
           </h2>
+
           <p className="mt-4 text-[16px] font-bold leading-7 text-brand-text">
-            대시보드부터 급여 정산까지, 기업 인사관리에 필요한 핵심 기능을 직관적인 화면으로 제공합니다.
+            조직 관리부터 급여 정산까지, 기업 인사관리에 필요한 핵심 기능을
+            직관적인 화면으로 제공합니다.
           </p>
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {features.map((feature, index) => {
-            const isActive = index === activeIndex;
+            const isActive = index === activeIndex
 
             return (
               <button
@@ -109,14 +157,18 @@ export default function Features() {
               >
                 <span
                   className={`flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-[15px] text-[15px] font-bold transition-colors duration-300 ease-out motion-reduce:transition-none ${
-                    isActive ? "bg-white/20 text-white" : "bg-brand-soft-strong text-brand-primary"
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "bg-brand-soft-strong text-brand-primary"
                   }`}
                 >
                   {feature.number}
                 </span>
+
                 <span className="mt-6 block text-[20px] font-extrabold leading-[24px] transition-colors duration-300 ease-out motion-reduce:transition-none">
                   {feature.title}
                 </span>
+
                 <span
                   className={`mt-3 block text-[14px] font-semibold leading-[22px] transition-colors duration-300 ease-out motion-reduce:transition-none ${
                     isActive ? "text-white/80" : "text-brand-text"
@@ -125,7 +177,7 @@ export default function Features() {
                   {feature.summary}
                 </span>
               </button>
-            );
+            )
           })}
         </div>
 
@@ -137,6 +189,7 @@ export default function Features() {
             <h3 className="text-[24px] font-extrabold text-brand-navy">
               {activeFeature.previewTitle}
             </h3>
+
             <div className="mt-5 flex aspect-[667/334] w-full max-w-[620px] items-center justify-center overflow-hidden rounded-[20px] bg-[#F4F8FF]">
               {!imageFailed ? (
                 <Image
@@ -149,34 +202,49 @@ export default function Features() {
                 />
               ) : (
                 <p className="px-6 text-center text-[16px] font-bold text-brand-muted">
-                  {`${activeFeature.title} 화면 미리보기`}
+                  {activeFeature.title} 화면 미리보기
                 </p>
               )}
             </div>
           </div>
 
           <div className="flex min-h-[350px] flex-col rounded-[24px] bg-gradient-to-br from-brand-primary-deep via-[#246BFE] to-brand-primary-light p-6 text-white sm:p-8">
-            <h3 className="text-[24px] font-extrabold">{activeFeature.detailTitle}</h3>
+            <h3 className="text-[24px] font-extrabold">
+              {activeFeature.detailTitle}
+            </h3>
+
             <p className="mt-3 text-[14px] font-semibold leading-[23px] text-white/80">
               {activeFeature.detailDescription}
             </p>
 
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-6 grid flex-1 grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
               {activeFeature.detailItems.map((item) => (
                 <div
-                  key={item}
-                  className="rounded-[14px] border border-white/20 bg-white/10 px-4 py-4 text-[15px] font-bold"
+                  key={item.title}
+                  className="flex min-h-[150px] flex-col justify-center rounded-[18px] border border-white/20 bg-white/10 px-5 py-6 sm:h-full"
                 >
-                  {item}
+                  <p className="text-[19px] font-extrabold leading-[1.3] text-white">
+                    {item.title}
+                  </p>
+
+                  <p className="mt-4 text-[12px] font-semibold leading-5 text-white/70">
+                    {item.description}
+                  </p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-auto grid grid-cols-1 gap-3 pt-6 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {activeFeature.stats.map((stat) => (
-                <div key={stat.label} className="rounded-[14px] bg-[#164BAF]/65 px-4 py-4">
+                <div
+                  key={stat.label}
+                  className="rounded-[14px] bg-[#164BAF]/65 px-4 py-4"
+                >
                   <p className="text-[18px] font-extrabold">{stat.value}</p>
-                  <p className="mt-2 text-[11px] font-semibold text-white/70">{stat.label}</p>
+
+                  <p className="mt-2 text-[11px] font-semibold text-white/70">
+                    {stat.label}
+                  </p>
                 </div>
               ))}
             </div>
@@ -184,5 +252,5 @@ export default function Features() {
         </div>
       </Container>
     </section>
-  );
+  )
 }
