@@ -102,7 +102,7 @@ export default function LoginPage() {
       storage.setItem("accessToken", data.accessToken);
       storage.setItem("employeeName", data.name);
 
-      router.push("/");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.");
     } finally {
