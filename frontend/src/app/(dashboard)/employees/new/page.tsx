@@ -102,7 +102,6 @@ export default function NewEmployeePage() {
   const [profileImage, setProfileImage] = useState<{ name: string; preview: string } | null>(null);
   const [attachedDocuments, setAttachedDocuments] = useState<{ id: string; name: string; size: string }[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -231,26 +230,11 @@ export default function NewEmployeePage() {
   return (
     <div className="max-w-[1600px] mx-auto pb-8">
       <div className="space-y-6">
-        <div className="mb-4 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-200 text-indigo-700">♧</div>
-            <div>
-              <p className="text-sm font-extrabold">신규 직원 등록</p>
-              <p className="text-xs text-indigo-500">필수 항목을 모두 입력한 뒤 저장하기를 눌러 등록을 완료하세요.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-sm font-bold">
-            <span className={isEditMode ? "text-slate-400" : "text-indigo-700"}>등록 모드</span>
-            <button
-              type="button"
-              aria-label={isEditMode ? "등록 모드로 전환" : "수정 모드로 전환"}
-              aria-pressed={isEditMode}
-              onClick={() => setIsEditMode((currentMode) => !currentMode)}
-              className={`h-7 w-12 rounded-full transition-colors after:mt-1 after:block after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all ${
-                isEditMode ? "bg-slate-500 after:ml-6" : "bg-indigo-500 after:ml-1"
-              }`}
-            />
-            <span className={isEditMode ? "text-indigo-700" : "text-slate-400"}>수정 모드</span>
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-6 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-200 text-indigo-700">♧</div>
+          <div>
+            <p className="text-sm font-extrabold">신규 직원 등록</p>
+            <p className="text-xs text-indigo-500">필수 항목을 모두 입력한 뒤 저장하기를 눌러 등록을 완료하세요.</p>
           </div>
         </div>
 
