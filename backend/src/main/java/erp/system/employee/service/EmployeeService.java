@@ -116,7 +116,8 @@ public class EmployeeService {
                 request.employeeStatusCode(),
                 request.bankName(),
                 request.accountNumber(),
-                request.accountHolder()
+                request.accountHolder(),
+                request.profileImage()
         );
 
         return EmployeeResponse.from(employee);

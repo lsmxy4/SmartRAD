@@ -20,6 +20,7 @@ public record EmployeeUpdateRequest(
         String employeeStatusCode,
         String bankName,
         String accountNumber,
-        String accountHolder
+        String accountHolder,
+        String profileImage
 ) {
 }

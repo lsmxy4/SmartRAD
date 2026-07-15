@@ -116,7 +116,7 @@ public class Employee extends BaseEntity {
     public void update(EmploymentType employmentType, String name,
                        LocalDate birthDate, String phone, String email, String address, LocalDate hireDate,
                        LocalDate resignationDate, String employeeStatusCode, String bankName, String accountNumber,
-                       String accountHolder) {
+                       String accountHolder, String profileImage) {
 
         this.employmentType = employmentType;
         this.name = name;
@@ -126,6 +126,7 @@ public class Employee extends BaseEntity {
         this.address = address;
         this.hireDate = hireDate;
         this.resignationDate = resignationDate;
+        this.profileImage = profileImage;
         this.employeeStatusCode = employeeStatusCode;
         this.bankName = bankName;
         this.accountNumber = accountNumber;

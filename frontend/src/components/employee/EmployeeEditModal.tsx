@@ -31,6 +31,16 @@ export default function EmployeeEditModal({ employee, onClose, onSave }: any) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleProfileImageChange = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData((prev: any) => ({ ...prev, profileImage: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
@@ -68,6 +78,26 @@ export default function EmployeeEditModal({ employee, onClose, onSave }: any) {
 
         <form onSubmit={handleSubmit}>
           <div className="p-5 space-y-5 max-h-[65vh] overflow-y-auto">
+            <div className="border border-gray-100 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-100">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">프로필 사진</h3>
+              </div>
+              <div className="p-4 flex items-center gap-4">
+                {formData.profileImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={formData.profileImage} alt="프로필 사진" className="w-16 h-16 rounded-full object-cover shadow-sm border border-gray-100" />
+                ) : (
+                  <div className="w-16 h-16 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-sm">
+                    {formData.name ? formData.name.charAt(0) : "?"}
+                  </div>
+                )}
+                <label className="cursor-pointer px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                  사진 변경
+                  <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
+                </label>
+              </div>
+            </div>
+
             <div className="border border-gray-100 rounded-lg overflow-hidden">
               <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-100">
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">기본 정보</h3>
