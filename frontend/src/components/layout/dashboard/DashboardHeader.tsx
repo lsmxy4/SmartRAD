@@ -6,6 +6,7 @@ import {
   ArrowDownTrayIcon,
   BellIcon,
   ClockIcon,
+  PlusIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 
@@ -45,6 +46,7 @@ export default function DashboardHeader() {
         {pathname === "/appointments" ? (
           <button
             type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("appointment:register"))}
             className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
           >
             <PlusIcon className="w-4 h-4" />

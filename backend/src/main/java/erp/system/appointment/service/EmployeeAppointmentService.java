@@ -13,9 +13,15 @@ import erp.system.employee.repository.EmployeeRepository;
 import erp.system.position.entity.Position;
 import erp.system.position.repository.PositionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -32,6 +38,30 @@ public class EmployeeAppointmentService {
         return employeeAppointmentRepository.findAllByEmployee_EmployeeIdOrderByEffectiveDateDesc(employeeId).stream()
                 .map(EmployeeAppointmentResponse::from)
                 .toList();
+    }
+
+    public Page<EmployeeAppointmentResponse> getList(Long employeeId, String appointmentType, YearMonth yearMonth,
+                                                       String keyword, Pageable pageable) {
+        Specification<EmployeeAppointment> spec = (root, query, cb) -> {
+            var predicate = cb.conjunction();
+            if (employeeId != null) {
+                predicate = cb.and(predicate, cb.equal(root.get("employee").get("employeeId"), employeeId));
+            }
+            if (StringUtils.hasText(appointmentType)) {
+                predicate = cb.and(predicate, cb.equal(root.get("appointmentType"), appointmentType));
+            }
+            if (yearMonth != null) {
+                LocalDate start = yearMonth.atDay(1);
+                LocalDate end = yearMonth.atEndOfMonth();
+                predicate = cb.and(predicate, cb.between(root.get("effectiveDate"), start, end));
+            }
+            if (StringUtils.hasText(keyword)) {
+                predicate = cb.and(predicate, cb.like(root.get("employee").get("name"), "%" + keyword + "%"));
+            }
+            return predicate;
+        };
+
+        return employeeAppointmentRepository.findAll(spec, pageable).map(EmployeeAppointmentResponse::from);
     }
 
     @Transactional

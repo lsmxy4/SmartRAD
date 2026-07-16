@@ -73,6 +73,11 @@ function toDate(value: string | null) {
   return value ? value.slice(0, 10) : "-";
 }
 
+function authHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function toRow(employee: EmployeeResponse): PayrollBasicRow {
   const registered =
     employee.baseSalary != null &&
@@ -277,6 +282,15 @@ export default function PayrollBasicPage() {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
   };
 
+  const openRegisterFromHeader = () => {
+    const target = employees.find((employee) => employee.status === "미등록");
+    if (!target) {
+      window.alert("급여 정보가 미등록된 직원이 없습니다.");
+      return;
+    }
+    openPayrollModal(target);
+  };
+
   const openPayrollModal = (employee: PayrollBasicRow) => {
     setSelectedEmployee(employee);
     setSalaryInput(employee.baseSalary?.toString() ?? "");
@@ -305,25 +319,62 @@ export default function PayrollBasicPage() {
     setModalError("");
 
     try {
-      const res = await fetch(
+      const detailRes = await fetch(
+        `${API_BASE_URL}/employees/${selectedEmployee.employeeId}`,
+      );
+      if (!detailRes.ok) throw new Error("직원 정보를 불러오지 못했습니다.");
+      const detail = (await detailRes.json()) as EmployeeResponse & {
+        employmentTypeId: number | null;
+        birthDate: string | null;
+        email: string;
+        phone: string | null;
+        address: string | null;
+        hireDate: string | null;
+        resignationDate: string | null;
+        employeeStatusCode: string;
+        profileImage: string | null;
+      };
+
+      const updateRes = await fetch(
+        `${API_BASE_URL}/employees/${selectedEmployee.employeeId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            employmentTypeId: detail.employmentTypeId,
+            name: detail.name,
+            birthDate: detail.birthDate,
+            phone: detail.phone,
+            email: detail.email,
+            address: detail.address,
+            hireDate: detail.hireDate,
+            resignationDate: detail.resignationDate,
+            employeeStatusCode: detail.employeeStatusCode,
+            bankName: bankNameInput.trim() || null,
+            accountNumber: accountNumberInput.trim() || null,
+            accountHolder: accountHolderInput.trim() || null,
+            profileImage: detail.profileImage,
+          }),
+        },
+      );
+      if (!updateRes.ok) throw new Error("급여 계좌정보 저장에 실패했습니다.");
+
+      const salaryRes = await fetch(
         `${API_BASE_URL}/employees/${selectedEmployee.employeeId}/base-salary`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({ baseSalary }),
         },
       );
+      if (!salaryRes.ok) throw new Error("급여 기본정보 저장에 실패했습니다.");
 
-      if (!res.ok) throw new Error("급여 기본정보 저장에 실패했습니다.");
-
-      const updatedEmployee = (await res.json()) as EmployeeResponse;
+      const updatedEmployee = (await salaryRes.json()) as EmployeeResponse;
       const updatedRow = toRow({
         ...updatedEmployee,
-        bankName: bankNameInput.trim() || updatedEmployee.bankName,
-        accountNumber:
-          accountNumberInput.trim() || updatedEmployee.accountNumber,
-        accountHolder:
-          accountHolderInput.trim() || updatedEmployee.accountHolder,
+        bankName: bankNameInput.trim() || null,
+        accountNumber: accountNumberInput.trim() || null,
+        accountHolder: accountHolderInput.trim() || null,
       });
 
       setEmployees((current) =>
@@ -366,7 +417,11 @@ export default function PayrollBasicPage() {
             <DocumentArrowUpIcon className="h-4 w-4" />
             엑셀 일괄등록
           </button>
-          <button className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+          <button
+            type="button"
+            onClick={openRegisterFromHeader}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+          >
             + 급여정보 등록
           </button>
         </div>
@@ -748,10 +803,6 @@ export default function PayrollBasicPage() {
                 </label>
               </div>
 
-              <p className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs font-medium text-indigo-600">
-                현재 백엔드는 기본급 수정 API를 제공합니다. 은행/계좌 입력값은
-                저장 후 화면 표시용으로 반영됩니다.
-              </p>
               {modalError && (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
                   {modalError}

@@ -5,10 +5,14 @@ import erp.system.appointment.dto.EmployeeAppointmentResponse;
 import erp.system.appointment.service.EmployeeAppointmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -21,6 +25,17 @@ public class EmployeeAppointmentController {
     @GetMapping
     public List<EmployeeAppointmentResponse> getByEmployee(@RequestParam Long employeeId) {
         return employeeAppointmentService.getByEmployee(employeeId);
+    }
+
+    @GetMapping("/search")
+    public Page<EmployeeAppointmentResponse> getList(
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) String appointmentType,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth,
+            @RequestParam(required = false) String keyword,
+            Pageable pageable
+    ) {
+        return employeeAppointmentService.getList(employeeId, appointmentType, yearMonth, keyword, pageable);
     }
 
     @PostMapping

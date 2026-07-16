@@ -39,6 +39,13 @@ public class PayrollController {
         return ResponseEntity.status(HttpStatus.CREATED).body(payrollService.calculate(request));
     }
 
+    @PostMapping("/calculate-all")
+    public ResponseEntity<PayrollService.PayrollCalculateAllResult> calculateAll(
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth payrollYearMonth
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(payrollService.calculateAll(payrollYearMonth));
+    }
+
     @PatchMapping("/{id}/pay")
     public PayrollResponse pay(@PathVariable Long id) {
         return payrollService.pay(id);

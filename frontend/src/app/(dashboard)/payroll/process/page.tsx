@@ -2,7 +2,6 @@
 
 import {
   AdjustmentsHorizontalIcon,
-  ArrowPathIcon,
   BanknotesIcon,
   CalendarDaysIcon,
   CheckCircleIcon,
@@ -77,6 +76,11 @@ const initialFilters: Filters = {
   keyword: "",
 };
 
+function authHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function formatCurrency(value: number | null | undefined) {
   return `${Math.round(value ?? 0).toLocaleString("ko-KR")}원`;
 }
@@ -145,6 +149,10 @@ function accountPillClass(status: AccountStatus) {
     : "bg-orange-50 text-orange-700 ring-orange-200";
 }
 
+function csvCell(value: string | number) {
+  return `"${String(value).replaceAll('"', '""')}"`;
+}
+
 export default function PayrollProcessPage() {
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +160,7 @@ export default function PayrollProcessPage() {
   const [draftFilters, setDraftFilters] = useState<Filters>(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(initialFilters);
   const [currentPage, setCurrentPage] = useState(1);
+  const [processingAll, setProcessingAll] = useState(false);
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -159,7 +168,7 @@ export default function PayrollProcessPage() {
       setErrorMessage("");
 
       try {
-        const res = await fetch(`${API_BASE_URL}/payrolls`);
+        const res = await fetch(`${API_BASE_URL}/payrolls`, { headers: authHeaders() });
         if (!res.ok) throw new Error("급여 지급 데이터를 불러오지 못했습니다.");
         const payrolls = (await res.json()) as PayrollResponse[];
         const employees = await Promise.all(
@@ -274,6 +283,7 @@ export default function PayrollProcessPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/payrolls/${payrollId}/pay`, {
         method: "PATCH",
+        headers: authHeaders(),
       });
       if (!res.ok) throw new Error("지급 처리에 실패했습니다.");
       setRows((current) =>
@@ -293,6 +303,56 @@ export default function PayrollProcessPage() {
         error instanceof Error ? error.message : "지급 처리에 실패했습니다.",
       );
     }
+  };
+
+  const runBulkPay = async () => {
+    const targets = rows.filter((row) => row.paymentStatus === "지급대기");
+    if (targets.length === 0) {
+      window.alert("지급 대기 중인 급여가 없습니다.");
+      return;
+    }
+    if (!window.confirm(`지급 대기 중인 ${targets.length}명에게 급여를 지급 처리하시겠습니까?`)) return;
+
+    setProcessingAll(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const target of targets) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/payrolls/${target.payrollId}/pay`, { method: "PATCH", headers: authHeaders() });
+        if (!res.ok) throw new Error();
+        succeeded++;
+      } catch {
+        failed++;
+      }
+    }
+    setRows((current) =>
+      current.map((row) =>
+        row.paymentStatus === "지급대기"
+          ? { ...row, paymentStatus: "지급완료", processedAt: `${row.paymentDate} 09:12` }
+          : row,
+      ),
+    );
+    setProcessingAll(false);
+    window.alert(`급여 지급 처리 완료: 성공 ${succeeded}명${failed > 0 ? `, 실패 ${failed}명` : ""}`);
+  };
+
+  const exportTransferFile = () => {
+    const targets = filteredRows.filter((row) => row.paymentStatus === "지급대기");
+    if (targets.length === 0) {
+      window.alert("이체 파일로 내보낼 지급 대기 내역이 없습니다.");
+      return;
+    }
+    const headers = ["사번", "성명", "은행", "계좌번호", "예금주", "실지급액"];
+    const lines = targets.map((row) => [row.employeeNo, row.name, row.bankName, row.accountNumber, row.depositor, row.netPay]);
+    const csv = `﻿${[headers, ...lines].map((line) => line.map(csvCell).join(",")).join("\r\n")}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `payroll-transfer-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const summaryCards = [
@@ -355,14 +415,20 @@ export default function PayrollProcessPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50">
-            <ArrowPathIcon className="h-4 w-4" /> 지급 결과 반영
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={exportTransferFile}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
             <DocumentArrowDownIcon className="h-4 w-4" /> 이체 파일 생성
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
-            <PaperAirplaneIcon className="h-4 w-4" /> 급여 지급 실행
+          <button
+            type="button"
+            onClick={runBulkPay}
+            disabled={processingAll}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <PaperAirplaneIcon className="h-4 w-4" /> {processingAll ? "처리 중..." : "급여 지급 실행"}
           </button>
         </div>
       </div>
@@ -667,6 +733,7 @@ export default function PayrollProcessPage() {
                       ) : row.paymentStatus === "지급실패" ? (
                         <button
                           type="button"
+                          onClick={() => markAsPaid(row.payrollId)}
                           className="rounded-lg border border-orange-200 px-3 py-1.5 text-xs font-bold text-orange-600"
                         >
                           재처리

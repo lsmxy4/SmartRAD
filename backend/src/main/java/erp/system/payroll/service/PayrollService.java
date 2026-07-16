@@ -69,11 +69,43 @@ public class PayrollService {
         Employee employee = employeeRepository.findById(request.employeeId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
+        return calculateForEmployee(employee, request.payrollYearMonth());
+    }
+
+    @Transactional
+    public PayrollCalculateAllResult calculateAll(YearMonth payrollYearMonth) {
+        List<Employee> employees = employeeRepository.findAll().stream()
+                .filter(Employee::isActive)
+                .toList();
+
+        int calculated = 0;
+        int skipped = 0;
+        for (Employee employee : employees) {
+            if (employee.getBaseSalary() == null) {
+                skipped++;
+                continue;
+            }
+            String yearMonthKey = payrollYearMonth.format(YEAR_MONTH_KEY);
+            boolean alreadyPaid = payrollRepository.findByEmployee_EmployeeIdAndPayrollYearMonth(employee.getEmployeeId(), yearMonthKey)
+                    .map(payroll -> Payroll.STATUS_PAID.equals(payroll.getPayrollStatusCode()))
+                    .orElse(false);
+            if (alreadyPaid) {
+                skipped++;
+                continue;
+            }
+            calculateForEmployee(employee, payrollYearMonth);
+            calculated++;
+        }
+
+        return new PayrollCalculateAllResult(calculated, skipped);
+    }
+
+    private PayrollDetailedResponse calculateForEmployee(Employee employee, YearMonth payrollYearMonth) {
         if (employee.getBaseSalary() == null) {
             throw new BusinessException(ErrorCode.BASE_SALARY_NOT_SET);
         }
 
-        String yearMonthKey = request.payrollYearMonth().format(YEAR_MONTH_KEY);
+        String yearMonthKey = payrollYearMonth.format(YEAR_MONTH_KEY);
         Payroll payroll = payrollRepository.findByEmployee_EmployeeIdAndPayrollYearMonth(employee.getEmployeeId(), yearMonthKey)
                 .orElseGet(() -> payrollRepository.save(
                         Payroll.builder().employee(employee).payrollYearMonth(yearMonthKey).build()
@@ -95,14 +127,14 @@ public class PayrollService {
 
         // 사원별 수당 (해당 월에 유효한 것만)
         for (EmployeeAllowance ea : employeeAllowanceRepository.findAllByEmployee_EmployeeId(employee.getEmployeeId())) {
-            if (ea.appliesTo(request.payrollYearMonth())) {
+            if (ea.appliesTo(payrollYearMonth)) {
                 details.add(earningDetail(payroll, null, ea.getAllowance().getAllowanceName(), ea.getAmount()));
                 totalEarning = totalEarning.add(ea.getAmount());
             }
         }
 
         // 근태 연동 초과근무수당
-        BigDecimal overtimePay = calculateOvertimePay(employee, request.payrollYearMonth());
+        BigDecimal overtimePay = calculateOvertimePay(employee, payrollYearMonth);
         if (overtimePay.compareTo(BigDecimal.ZERO) > 0) {
             details.add(earningDetail(payroll, null, "초과근무수당", overtimePay));
             totalEarning = totalEarning.add(overtimePay);
@@ -136,6 +168,9 @@ public class PayrollService {
         );
 
         return PayrollDetailedResponse.of(payroll, details);
+    }
+
+    public record PayrollCalculateAllResult(int calculated, int skipped) {
     }
 
     @Transactional

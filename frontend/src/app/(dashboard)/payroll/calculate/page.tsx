@@ -110,12 +110,24 @@ const initialFilters: Filters = {
   keyword: "",
 };
 
+function authHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function currentYearMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function PayrollCalculatePage() {
   const [draftFilters, setDraftFilters] = useState<Filters>(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(initialFilters);
   const [payrollRows, setPayrollRows] = useState<PayrollRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [calculating, setCalculating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -123,7 +135,7 @@ export default function PayrollCalculatePage() {
       setErrorMessage("");
 
       try {
-        const res = await fetch(`${API_BASE_URL}/payrolls`);
+        const res = await fetch(`${API_BASE_URL}/payrolls`, { headers: authHeaders() });
         if (!res.ok) throw new Error("급여 계산 결과를 불러오지 못했습니다.");
         const payrolls = (await res.json()) as PayrollResponse[];
         setPayrollRows(payrolls.map(toRow));
@@ -140,7 +152,35 @@ export default function PayrollCalculatePage() {
     };
 
     fetchPayrolls();
-  }, []);
+  }, [refreshKey]);
+
+  const runCalculation = async () => {
+    const input = window.prompt("급여를 계산할 연월을 입력하세요 (예: 2026-07)", currentYearMonth());
+    if (!input) return;
+    if (!/^\d{4}-\d{2}$/.test(input)) {
+      window.alert("연월 형식이 올바르지 않습니다. 예: 2026-07");
+      return;
+    }
+
+    setCalculating(true);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/payrolls/calculate-all?payrollYearMonth=${input}`,
+        { method: "POST", headers: authHeaders() },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message || "급여 계산 실행에 실패했습니다.");
+      }
+      const result = (await res.json()) as { calculated: number; skipped: number };
+      window.alert(`${input} 급여 계산 완료: ${result.calculated}명 계산, ${result.skipped}명 제외(기본급 미등록 또는 지급 완료)`);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "급여 계산 실행에 실패했습니다.");
+    } finally {
+      setCalculating(false);
+    }
+  };
 
   const filterConfigs = useMemo<
     { key: FilterKey; label: string; options: string[] }[]
@@ -330,9 +370,14 @@ export default function PayrollCalculatePage() {
             <CheckCircleIcon className="h-4 w-4" />
             계산 결과 확정
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+          <button
+            type="button"
+            onClick={runCalculation}
+            disabled={calculating}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
             <PlayIcon className="h-4 w-4" />
-            급여 계산 실행
+            {calculating ? "계산 중..." : "급여 계산 실행"}
           </button>
         </div>
       </div>
