@@ -11,12 +11,12 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
 
     @Query(value = """
             SELECT n FROM Notice n
-            WHERE (:keyword IS NULL OR n.title LIKE CONCAT('%', :keyword, '%'))
+            WHERE (:keyword IS NULL OR n.title LIKE CONCAT('%', :keyword, '%') OR n.writer.name LIKE CONCAT('%', :keyword, '%'))
             ORDER BY n.pinned DESC, n.createdAt DESC
             """,
             countQuery = """
             SELECT COUNT(n) FROM Notice n
-            WHERE (:keyword IS NULL OR n.title LIKE CONCAT('%', :keyword, '%'))
+            WHERE (:keyword IS NULL OR n.title LIKE CONCAT('%', :keyword, '%') OR n.writer.name LIKE CONCAT('%', :keyword, '%'))
             """)
     Page<Notice> search(@Param("keyword") String keyword, Pageable pageable);
 }
