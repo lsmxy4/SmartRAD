@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowDownTrayIcon,
   BellIcon,
+  CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
@@ -13,11 +17,39 @@ const flatItems = dashboardMenuGroups.flatMap((group) =>
   group.items.map((item) => ({ ...item, groupTitle: group.title }))
 );
 
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftMonth(month: string, amount: number) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const next = new Date(year, monthNumber - 1 + amount, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function DashboardHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const current = flatItems.find((item) => item.href === pathname) ?? flatItems[0];
   const isDailyAttendance = pathname === "/attendance/daily";
+  const isMonthlyAttendance = pathname === "/attendance/monthly";
+  const [monthlySelection, setMonthlySelection] = useState(currentMonth);
+
+  useEffect(() => {
+    const handleSync = (event: Event) => {
+      const { month } = (event as CustomEvent<{ month: string }>).detail;
+      setMonthlySelection(month);
+    };
+    window.addEventListener("attendance:monthly-sync", handleSync);
+    return () => window.removeEventListener("attendance:monthly-sync", handleSync);
+  }, []);
+
+  const changeMonth = (amount: number) => {
+    const month = shiftMonth(monthlySelection, amount);
+    setMonthlySelection(month);
+    window.dispatchEvent(new CustomEvent("attendance:monthly-change", { detail: { month } }));
+  };
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10 sticky top-0">
@@ -58,6 +90,15 @@ export default function DashboardHeader() {
               <ClockIcon className="h-4 w-4" />
               근태 등록
             </button>
+          </>
+        ) : isMonthlyAttendance ? (
+          <>
+            <div className="flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-600">
+              <button type="button" onClick={() => changeMonth(-1)} aria-label="이전 월" className="flex h-full w-9 items-center justify-center hover:bg-gray-50"><ChevronLeftIcon className="h-4 w-4" /></button>
+              <div className="flex h-full items-center gap-2 border-x border-gray-200 px-3 text-sm font-semibold text-gray-800"><CalendarDaysIcon className="h-4 w-4 text-indigo-600" />{Number(monthlySelection.slice(0, 4))}년 {Number(monthlySelection.slice(5, 7))}월</div>
+              <button type="button" onClick={() => changeMonth(1)} aria-label="다음 월" className="flex h-full w-9 items-center justify-center hover:bg-gray-50"><ChevronRightIcon className="h-4 w-4" /></button>
+            </div>
+            <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("attendance:monthly-report"))} className="flex h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"><ArrowDownTrayIcon className="h-4 w-4" />리포트 출력</button>
           </>
         ) : (
           <button
