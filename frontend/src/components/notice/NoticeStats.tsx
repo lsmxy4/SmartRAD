@@ -12,7 +12,7 @@ export default function NoticeStats() {
             <ClipboardDocumentListIcon className="w-4 h-4 text-gray-400" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-gray-900">24건</h3>
+        <h3 className="text-2xl font-bold text-gray-900">-건</h3>
         <p className="text-xs text-gray-400 mt-1">전체 등록 공지</p>
       </div>
 
@@ -24,7 +24,7 @@ export default function NoticeStats() {
             <CheckCircleIcon className="w-4 h-4 text-blue-600" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-blue-900">15건</h3>
+        <h3 className="text-2xl font-bold text-blue-900">-건</h3>
         <p className="text-xs text-blue-500 mt-1">현재 노출 중</p>
       </div>
 
@@ -36,7 +36,7 @@ export default function NoticeStats() {
             <ClockIcon className="w-4 h-4 text-emerald-600" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-emerald-900">3건</h3>
+        <h3 className="text-2xl font-bold text-emerald-900">-건</h3>
         <p className="text-xs text-emerald-500 mt-1">게시 예정</p>
       </div>
 
@@ -48,7 +48,7 @@ export default function NoticeStats() {
             <DocumentIcon className="w-4 h-4 text-gray-400" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-gray-900">4건</h3>
+        <h3 className="text-2xl font-bold text-gray-900">-건</h3>
         <p className="text-xs text-gray-500 mt-1">작성 중</p>
       </div>
 
@@ -60,7 +60,7 @@ export default function NoticeStats() {
             <ViewfinderCircleIcon className="w-4 h-4 text-orange-600" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-orange-900">2건</h3>
+        <h3 className="text-2xl font-bold text-orange-900">-건</h3>
         <p className="text-xs text-orange-500 mt-1">중요 공지</p>
       </div>
     </div>
