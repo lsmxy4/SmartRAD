@@ -95,6 +95,15 @@ export default function EmployeeEditModal({ employee, onClose, onSave }: any) {
                   사진 변경
                   <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
                 </label>
+                {formData.profileImage && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev: any) => ({ ...prev, profileImage: null }))}
+                    className="px-3 py-1.5 text-sm font-medium text-rose-600 bg-white border border-rose-200 rounded-md hover:bg-rose-50"
+                  >
+                    사진 삭제
+                  </button>
+                )}
               </div>
             </div>
 
