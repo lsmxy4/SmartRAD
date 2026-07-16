@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
   ArrowDownTrayIcon,
   BellIcon,
+  CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   PlusIcon,
   UserPlusIcon,
@@ -16,11 +20,39 @@ const flatItems = dashboardMenuGroups.flatMap((group) =>
   group.items.map((item) => ({ ...item, groupTitle: group.title }))
 );
 
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftMonth(month: string, amount: number) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const next = new Date(year, monthNumber - 1 + amount, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function DashboardHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const current = flatItems.find((item) => item.href === pathname) ?? flatItems[0];
   const isDailyAttendance = pathname === "/attendance/daily";
+  const isMonthlyAttendance = pathname === "/attendance/monthly";
+  const [monthlySelection, setMonthlySelection] = useState(currentMonth);
+
+  useEffect(() => {
+    const handleSync = (event: Event) => {
+      const { month } = (event as CustomEvent<{ month: string }>).detail;
+      setMonthlySelection(month);
+    };
+    window.addEventListener("attendance:monthly-sync", handleSync);
+    return () => window.removeEventListener("attendance:monthly-sync", handleSync);
+  }, []);
+
+  const changeMonth = (amount: number) => {
+    const month = shiftMonth(monthlySelection, amount);
+    setMonthlySelection(month);
+    window.dispatchEvent(new CustomEvent("attendance:monthly-change", { detail: { month } }));
+  };
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10 sticky top-0">
