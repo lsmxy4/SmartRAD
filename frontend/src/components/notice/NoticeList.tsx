@@ -30,19 +30,32 @@ export default function NoticeList() {
           <div className="w-32">
             <label className="block text-sm font-medium text-gray-700 mb-1">게시 상태</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option>전체</option>
+              <option value="">전체</option>
+              <option value="ACTIVE">게시 중</option>
+              <option value="SCHEDULED">예약 게시</option>
+              <option value="DRAFT">임시 저장</option>
+              <option value="CLOSED">게시 종료</option>
             </select>
           </div>
           <div className="w-32">
             <label className="block text-sm font-medium text-gray-700 mb-1">공지 유형</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option>전체</option>
+              <option value="">전체</option>
+              <option value="URGENT">긴급</option>
+              <option value="IMPORTANT">중요</option>
+              <option value="HR">인사</option>
+              <option value="SYSTEM">시스템</option>
+              <option value="GENERAL">일반</option>
             </select>
           </div>
           <div className="w-32">
             <label className="block text-sm font-medium text-gray-700 mb-1">공개 대상</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option>전체</option>
+              <option value="">전체</option>
+              <option value="ALL_EMP">전체 직원</option>
+              <option value="EXEC">임원진</option>
+              <option value="HR_TEAM">인사팀</option>
+              <option value="IT_TEAM">IT본부</option>
             </select>
           </div>
           <div className="w-56">
