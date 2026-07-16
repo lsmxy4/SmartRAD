@@ -5,6 +5,7 @@ import erp.system.employee.dto.EmployeeBulkEmploymentTypeRequest;
 import erp.system.employee.dto.EmployeeBulkPayrollBasicRequest;
 import erp.system.employee.dto.EmployeeBulkResult;
 import erp.system.employee.dto.EmployeeCreateRequest;
+import erp.system.employee.dto.EmployeePayrollSummaryResponse;
 import erp.system.employee.dto.EmployeeResponse;
 import erp.system.employee.dto.EmployeeSummaryResponse;
 import erp.system.employee.dto.EmployeeUpdateRequest;
@@ -44,6 +45,11 @@ public class EmployeeController {
             Pageable pageable
     ) {
         return employeeService.getList(keyword, departmentId, status, pageable);
+    }
+
+    @GetMapping("/payroll-summary")
+    public List<EmployeePayrollSummaryResponse> getPayrollSummaryList() {
+        return employeeService.getPayrollSummaryList();
     }
 
     @GetMapping("/{id}")

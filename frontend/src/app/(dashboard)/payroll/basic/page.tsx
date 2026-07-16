@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDownTrayIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   DocumentArrowUpIcon,
@@ -10,7 +11,8 @@ import {
   UserMinusIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
@@ -29,11 +31,6 @@ interface EmployeeResponse {
   accountHolder: string | null;
   baseSalary: number | null;
   updatedAt: string | null;
-}
-
-interface EmployeePage {
-  content: Pick<EmployeeResponse, "employeeId">[];
-  totalElements: number;
 }
 
 interface EmploymentTypeOption {
@@ -186,6 +183,8 @@ export default function PayrollBasicPage() {
   );
   const [bulkPayrollError, setBulkPayrollError] = useState("");
   const [bulkPayrollSaving, setBulkPayrollSaving] = useState(false);
+  const [excelUploading, setExcelUploading] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement>(null);
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -193,24 +192,16 @@ export default function PayrollBasicPage() {
 
     try {
       const listRes = await fetch(
-        `${API_BASE_URL}/employees?page=0&size=1000&sort=name,asc`,
+        `${API_BASE_URL}/employees/payroll-summary`,
+        { headers: authHeaders() },
       );
-      if (!listRes.ok) throw new Error("직원 목록을 불러오지 못했습니다.");
+      if (!listRes.ok) throw new Error("직원 급여 기본정보를 불러오지 못했습니다.");
 
-      const page: EmployeePage = await listRes.json();
-      const details = await Promise.all(
-        (page.content ?? []).map(async ({ employeeId }) => {
-          const detailRes = await fetch(
-            `${API_BASE_URL}/employees/${employeeId}`,
-          );
-          if (!detailRes.ok)
-            throw new Error("직원 급여 기본정보를 불러오지 못했습니다.");
-          return (await detailRes.json()) as EmployeeResponse;
-        }),
-      );
+      const details = (await listRes.json()) as EmployeeResponse[];
+      const sorted = [...details].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
-      setEmployees(details.map(toRow));
-      setTotalEmployees(page.totalElements ?? details.length);
+      setEmployees(sorted.map(toRow));
+      setTotalEmployees(sorted.length);
     } catch (error) {
       console.error("Failed to fetch payroll basic employees", error);
       setErrorMessage(
@@ -661,6 +652,115 @@ export default function PayrollBasicPage() {
     }
   };
 
+  const downloadExcelTemplate = () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["사번", "기본급", "은행", "계좌번호", "예금주"],
+      ["E2026001", 50000000, "국민은행", "123-456-7890", "홍길동"],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "급여정보");
+    XLSX.writeFile(workbook, "급여정보_일괄등록_양식.xlsx");
+  };
+
+  const handleExcelUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setExcelUploading(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+        defval: "",
+      });
+
+      if (rows.length === 0) {
+        window.alert("엑셀 파일에 데이터가 없습니다.");
+        return;
+      }
+
+      const byEmployeeNo = new Map(
+        employees.map((employee) => [employee.employeeNo, employee]),
+      );
+      const items: {
+        employeeId: number;
+        baseSalary: number;
+        bankName: string | null;
+        accountNumber: string | null;
+        accountHolder: string | null;
+      }[] = [];
+      const notFound: string[] = [];
+      const invalid: string[] = [];
+
+      rows.forEach((row, index) => {
+        const employeeNo = String(row["사번"] ?? "").trim();
+        if (!employeeNo) return;
+        const target = byEmployeeNo.get(employeeNo);
+        if (!target) {
+          notFound.push(employeeNo);
+          return;
+        }
+        const baseSalary = Number(
+          String(row["기본급"] ?? "").replace(/,/g, ""),
+        );
+        if (!Number.isFinite(baseSalary) || baseSalary < 0) {
+          invalid.push(`${index + 2}행(${employeeNo})`);
+          return;
+        }
+        items.push({
+          employeeId: target.employeeId,
+          baseSalary,
+          bankName: String(row["은행"] ?? "").trim() || null,
+          accountNumber: String(row["계좌번호"] ?? "").trim() || null,
+          accountHolder: String(row["예금주"] ?? "").trim() || null,
+        });
+      });
+
+      if (items.length === 0) {
+        window.alert(
+          "등록할 수 있는 유효한 행이 없습니다. 사번과 기본급을 확인해주세요.",
+        );
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/employees/bulk-payroll-basic`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) throw new Error("엑셀 일괄등록에 실패했습니다.");
+
+      const results = (await res.json()) as EmployeeBulkResult[];
+      const successCount = results.filter((result) => result.success).length;
+      const failCount = results.length - successCount;
+
+      const messages = [`${successCount}명 등록 성공`];
+      if (failCount > 0) messages.push(`${failCount}명 실패`);
+      if (notFound.length > 0)
+        messages.push(
+          `사번 불일치 ${notFound.length}건(${notFound.slice(0, 5).join(", ")}${notFound.length > 5 ? " 외" : ""})`,
+        );
+      if (invalid.length > 0)
+        messages.push(`기본급 형식 오류 ${invalid.length}건`);
+
+      window.alert(messages.join("\n"));
+      await fetchEmployees();
+    } catch (error) {
+      console.error("Failed to upload excel", error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "엑셀 파일을 처리하지 못했습니다.",
+      );
+    } finally {
+      setExcelUploading(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-5 text-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -677,9 +777,29 @@ export default function PayrollBasicPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={downloadExcelTemplate}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            양식 다운로드
+          </button>
+          <input
+            ref={excelInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleExcelUpload}
+          />
+          <button
+            type="button"
+            onClick={() => excelInputRef.current?.click()}
+            disabled={excelUploading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
             <DocumentArrowUpIcon className="h-4 w-4" />
-            엑셀 일괄등록
+            {excelUploading ? "등록 중..." : "엑셀 일괄등록"}
           </button>
           <button
             type="button"

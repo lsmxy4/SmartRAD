@@ -9,6 +9,7 @@ import erp.system.employee.dto.EmployeeBulkEmploymentTypeRequest;
 import erp.system.employee.dto.EmployeeBulkPayrollBasicRequest;
 import erp.system.employee.dto.EmployeeBulkResult;
 import erp.system.employee.dto.EmployeeCreateRequest;
+import erp.system.employee.dto.EmployeePayrollSummaryResponse;
 import erp.system.employee.dto.EmployeeResponse;
 import erp.system.employee.dto.EmployeeSummaryResponse;
 import erp.system.employee.dto.EmployeeUpdateRequest;
@@ -67,6 +68,12 @@ public class EmployeeService {
         };
 
         return employeeRepository.findAll(spec, pageable).map(EmployeeSummaryResponse::from);
+    }
+
+    public List<EmployeePayrollSummaryResponse> getPayrollSummaryList() {
+        return employeeRepository.findAll().stream()
+                .map(EmployeePayrollSummaryResponse::from)
+                .toList();
     }
 
     @Transactional
