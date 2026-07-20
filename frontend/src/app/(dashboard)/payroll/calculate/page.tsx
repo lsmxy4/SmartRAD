@@ -2,6 +2,7 @@
 
 import {
   AdjustmentsHorizontalIcon,
+  ArrowTopRightOnSquareIcon,
   BanknotesIcon,
   CalendarDaysIcon,
   CheckCircleIcon,
@@ -11,6 +12,7 @@ import {
   UserGroupIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL =
@@ -405,6 +407,87 @@ function PayrollDetailModal({
   );
 }
 
+function PayrollCriteriaModal({ onClose }: { onClose: () => void }) {
+  const criteria = [
+    {
+      title: "직원별 급여 기본정보",
+      description: "기본급, 고정수당, 급여계좌 정보를 수정합니다.",
+      href: "/payroll/basic",
+      action: "기본정보 수정",
+    },
+    {
+      title: "지급·공제 항목",
+      description: "공제 금액·비율과 급여 계산에 사용할 항목을 관리합니다.",
+      href: "/payroll/items",
+      action: "급여항목 관리",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payroll-criteria-title"
+        className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 id="payroll-criteria-title" className="text-xl font-extrabold text-slate-900">
+              급여 계산 기준 수정
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              기준을 변경한 뒤 해당 직원을 다시 계산하면 변경 사항이 반영됩니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="급여 계산 기준 수정 닫기"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-3 px-6 py-5">
+          {criteria.map((criterion) => (
+            <article
+              key={criterion.href}
+              className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <h3 className="font-bold text-slate-800">{criterion.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-500">{criterion.description}</p>
+              </div>
+              <Link
+                href={criterion.href}
+                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100"
+              >
+                {criterion.action}
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
+            </article>
+          ))}
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-xs font-medium leading-5 text-amber-700">
+            지급완료된 급여는 재계산할 수 없습니다. 계산완료 또는 검토필요 상태의 급여만 재계산해 주세요.
+          </p>
+        </div>
+
+        <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+          >
+            닫기
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function PayrollCalculatePage() {
   const [draftFilters, setDraftFilters] = useState<Filters>(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(initialFilters);
@@ -416,6 +499,7 @@ export default function PayrollCalculatePage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
   const [detailState, setDetailState] = useState<DetailModalState | null>(null);
+  const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -834,7 +918,7 @@ export default function PayrollCalculatePage() {
           <button
             type="button"
             onClick={runCalculation}
-            disabled={calculating}
+             disabled={calculating}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <PlayIcon className="h-4 w-4" />
@@ -859,7 +943,11 @@ export default function PayrollCalculatePage() {
           <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">
             ● 계산 전
           </span>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={() => setCriteriaModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
             <AdjustmentsHorizontalIcon className="h-4 w-4" />
             기준 수정
           </button>
@@ -1206,6 +1294,9 @@ export default function PayrollCalculatePage() {
 
       {detailState && (
         <PayrollDetailModal state={detailState} onClose={closeDetail} />
+      )}
+      {criteriaModalOpen && (
+        <PayrollCriteriaModal onClose={() => setCriteriaModalOpen(false)} />
       )}
     </div>
   );
