@@ -30,7 +30,7 @@ const features: Feature[] = [
     summary:
       "직원 정보, 부서, 직급, 재직 상태를 하나의 기준으로 통합 관리합니다.",
     previewTitle: "조직·구성원 관리 미리보기",
-    previewImage: "/feature-members.svg",
+    previewImage: "/img/feature-organization.png",
     detailTitle: "구성원 정보를 체계적으로 관리",
     detailDescription:
       "직원 기본 정보와 부서, 직급, 재직 상태를 한 화면에서 관리하고 필요한 정보를 빠르게 조회할 수 있습니다.",
@@ -59,7 +59,7 @@ const features: Feature[] = [
     title: "근태·휴가 관리",
     summary: "출퇴근 기록 연동과 휴가 신청, 승인 흐름을 간편하게 처리합니다.",
     previewTitle: "근태·휴가 관리 미리보기",
-    previewImage: "/feature-attendance.svg",
+    previewImage: "/img/feature-attendance.png",
     detailTitle: "근태와 휴가 흐름을 간편하게",
     detailDescription:
       "출퇴근 기록과 휴가 신청, 승인 상태를 한곳에서 확인하고 관리할 수 있습니다.",
@@ -89,7 +89,7 @@ const features: Feature[] = [
     summary:
       "수당과 공제를 자동 계산하고 급여명세서 발송까지 효율적으로 관리합니다.",
     previewTitle: "급여 정산 자동화 미리보기",
-    previewImage: "/feature-payroll.svg",
+    previewImage: "/img/feature-payroll.png",
     detailTitle: "복잡한 급여 정산을 자동화",
     detailDescription:
       "근태 데이터를 기반으로 수당과 공제를 계산하고 급여명세서 발송까지 한 번에 처리합니다.",
@@ -183,32 +183,35 @@ export default function Features() {
 
         <div
           key={activeFeature.number}
-          className="mt-10 grid items-stretch gap-5 transition-[opacity,transform] duration-200 ease-out starting:translate-y-1 starting:opacity-0 motion-reduce:transform-none motion-reduce:transition-none lg:grid-cols-2"
+          className="mt-10 grid items-start gap-5 transition-[opacity,transform] duration-200 ease-out starting:translate-y-1 starting:opacity-0 motion-reduce:transform-none motion-reduce:transition-none lg:grid-cols-2"
         >
           <div className="min-h-[350px] rounded-[24px] border border-brand-border bg-white p-6 shadow-[0_18px_45px_rgba(50,94,160,0.08)] sm:p-7">
             <h3 className="text-[24px] font-extrabold text-brand-navy">
               {activeFeature.previewTitle}
             </h3>
 
-            <div className="mt-5 flex aspect-[667/334] w-full max-w-[620px] items-center justify-center overflow-hidden rounded-[20px] bg-[#F4F8FF]">
+            <div className="relative mt-5 aspect-[2048/1339] w-full overflow-hidden rounded-[20px] bg-[#F4F8FF]">
               {!imageFailed ? (
                 <Image
                   src={activeFeature.previewImage}
                   alt={`${activeFeature.title} 화면 미리보기`}
-                  width={667}
-                  height={334}
-                  className="h-auto w-full object-contain"
+                  fill
+                  unoptimized
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-contain object-center"
                   onError={() => setFailedImage(activeFeature.previewImage)}
                 />
               ) : (
-                <p className="px-6 text-center text-[16px] font-bold text-brand-muted">
-                  {activeFeature.title} 화면 미리보기
-                </p>
+                <div className="flex h-full w-full items-center justify-center">
+                  <p className="px-6 text-center text-[16px] font-bold text-brand-muted">
+                    {activeFeature.title} 화면 미리보기
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="flex min-h-[350px] flex-col rounded-[24px] bg-gradient-to-br from-brand-primary-deep via-[#246BFE] to-brand-primary-light p-6 text-white sm:p-8">
+          <div className="flex h-fit self-start flex-col rounded-[24px] bg-gradient-to-br from-brand-primary-deep via-[#246BFE] to-brand-primary-light p-6 text-white sm:p-8">
             <h3 className="text-[24px] font-extrabold">
               {activeFeature.detailTitle}
             </h3>
@@ -217,11 +220,11 @@ export default function Features() {
               {activeFeature.detailDescription}
             </p>
 
-            <div className="mt-6 grid flex-1 grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               {activeFeature.detailItems.map((item) => (
                 <div
                   key={item.title}
-                  className="flex min-h-[150px] flex-col justify-center rounded-[18px] border border-white/20 bg-white/10 px-5 py-6 sm:h-full"
+                  className="flex h-[180px] flex-col justify-center rounded-[18px] border border-white/20 bg-white/10 px-5 py-6"
                 >
                   <p className="text-[19px] font-extrabold leading-[1.3] text-white">
                     {item.title}
@@ -238,7 +241,7 @@ export default function Features() {
               {activeFeature.stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-[14px] bg-[#164BAF]/65 px-4 py-4"
+                  className="flex min-h-[88px] flex-col justify-center rounded-[14px] bg-[#164BAF]/65 px-4 py-4"
                 >
                   <p className="text-[18px] font-extrabold">{stat.value}</p>
 
