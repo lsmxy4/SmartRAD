@@ -20,10 +20,14 @@ export default function AppointmentsPage() {
     setRefreshKey((key) => key + 1);
   }, []);
 
+  const handleActionComplete = useCallback(() => {
+    setRefreshKey((key) => key + 1);
+  }, []);
+
   return (
     <div className="max-w-[1600px] mx-auto h-[calc(100vh-100px)] flex flex-col p-6">
       <AppointmentStats refreshKey={refreshKey} />
-      <AppointmentList refreshKey={refreshKey} />
+      <AppointmentList refreshKey={refreshKey} onActionComplete={handleActionComplete} />
       {showModal && (
         <AppointmentRegisterModal onClose={() => setShowModal(false)} onSaved={handleSaved} />
       )}

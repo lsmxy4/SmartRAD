@@ -1,12 +1,17 @@
 package erp.system.payroll.service;
 
+import erp.system.allowance.entity.Allowance;
 import erp.system.allowance.entity.EmployeeAllowance;
 import erp.system.allowance.repository.EmployeeAllowanceRepository;
 import erp.system.attendance.repository.AttendanceRepository;
 import erp.system.common.exception.BusinessException;
 import erp.system.common.exception.ErrorCode;
+import erp.system.common.util.SoftDeleteAware;
+import erp.system.department.entity.Department;
 import erp.system.employee.entity.Employee;
 import erp.system.employee.repository.EmployeeRepository;
+import erp.system.position.entity.Position;
+import erp.system.payroll.dto.PayrollBulkResult;
 import erp.system.payroll.dto.PayrollCalculateRequest;
 import erp.system.payroll.dto.PayrollDetailedResponse;
 import erp.system.payroll.dto.PayrollResponse;
@@ -44,6 +49,7 @@ public class PayrollService {
     private final EmployeeRepository employeeRepository;
     private final EmployeeAllowanceRepository employeeAllowanceRepository;
     private final AttendanceRepository attendanceRepository;
+    private final PayrollFailureRecorder payrollFailureRecorder;
 
     public List<PayrollResponse> getList(Long employeeId, YearMonth payrollYearMonth) {
         return payrollRepository.findAll((root, query, cb) -> {
@@ -128,7 +134,9 @@ public class PayrollService {
         // 사원별 수당 (해당 월에 유효한 것만)
         for (EmployeeAllowance ea : employeeAllowanceRepository.findAllByEmployee_EmployeeId(employee.getEmployeeId())) {
             if (ea.appliesTo(payrollYearMonth)) {
-                details.add(earningDetail(payroll, null, ea.getAllowance().getAllowanceName(), ea.getAmount()));
+                Allowance allowance = SoftDeleteAware.resolve(ea.getAllowance(), Allowance::getAllowanceName);
+                String allowanceName = allowance != null ? allowance.getAllowanceName() : "(삭제된 수당)";
+                details.add(earningDetail(payroll, null, allowanceName, ea.getAmount()));
                 totalEarning = totalEarning.add(ea.getAmount());
             }
         }
@@ -160,14 +168,73 @@ public class PayrollService {
         payrollDetailRepository.saveAll(details);
 
         BigDecimal realPay = totalEarning.subtract(totalDeduction);
+        Department department = SoftDeleteAware.resolve(employee.getDepartment(), Department::getDepartmentName);
+        Position position = SoftDeleteAware.resolve(employee.getPosition(), Position::getPositionName);
+        LocalDate start = payrollYearMonth.atDay(1);
+        LocalDate end = payrollYearMonth.atEndOfMonth();
+        boolean needsReview = attendanceRepository.countByEmployee_EmployeeIdAndWorkDateBetween(employee.getEmployeeId(), start, end) == 0;
         payroll.applyCalculation(
                 totalEarning, totalDeduction, realPay,
                 employee.getName(),
-                employee.getDepartment() != null ? employee.getDepartment().getDepartmentName() : null,
-                employee.getPosition() != null ? employee.getPosition().getPositionName() : null
+                department != null ? department.getDepartmentName() : null,
+                position != null ? position.getPositionName() : null,
+                needsReview
         );
 
         return PayrollDetailedResponse.of(payroll, details);
+    }
+
+    @Transactional
+    public PayrollResponse confirm(Long payrollId) {
+        Payroll payroll = findPayroll(payrollId);
+        payroll.confirm();
+        return PayrollResponse.from(payroll);
+    }
+
+    @Transactional
+    public PayrollResponse exclude(Long payrollId) {
+        Payroll payroll = findPayroll(payrollId);
+        payroll.exclude();
+        return PayrollResponse.from(payroll);
+    }
+
+    @Transactional
+    public PayrollResponse completeReview(Long payrollId) {
+        Payroll payroll = findPayroll(payrollId);
+        payroll.completeReview();
+        return PayrollResponse.from(payroll);
+    }
+
+    @Transactional
+    public PayrollResponse hold(Long payrollId) {
+        Payroll payroll = findPayroll(payrollId);
+        payroll.hold();
+        return PayrollResponse.from(payroll);
+    }
+
+    @Transactional
+    public List<PayrollBulkResult> bulkPay(List<Long> payrollIds) {
+        return payrollIds.stream()
+                .map(id -> {
+                    try {
+                        payWithAccountCheck(id);
+                        return new PayrollBulkResult(id, true, null);
+                    } catch (BusinessException e) {
+                        return new PayrollBulkResult(id, false, e.getMessage());
+                    }
+                })
+                .toList();
+    }
+
+    private Payroll payWithAccountCheck(Long payrollId) {
+        Payroll payroll = findPayroll(payrollId);
+        Employee employee = payroll.getEmployee();
+        if (employee.getBankName() == null || employee.getAccountNumber() == null) {
+            payrollFailureRecorder.markFailed(payrollId);
+            throw new BusinessException(ErrorCode.PAYROLL_ACCOUNT_NOT_REGISTERED);
+        }
+        payroll.pay(LocalDate.now());
+        return payroll;
     }
 
     public record PayrollCalculateAllResult(int calculated, int skipped) {
@@ -175,17 +242,7 @@ public class PayrollService {
 
     @Transactional
     public PayrollResponse pay(Long payrollId) {
-        Payroll payroll = findPayroll(payrollId);
-
-        if (Payroll.STATUS_PAID.equals(payroll.getPayrollStatusCode())) {
-            throw new BusinessException(ErrorCode.ALREADY_PAID_PAYROLL);
-        }
-        if (!Payroll.STATUS_CALCULATED.equals(payroll.getPayrollStatusCode())) {
-            throw new BusinessException(ErrorCode.PAYROLL_NOT_CALCULATED);
-        }
-
-        payroll.pay(LocalDate.now());
-        return PayrollResponse.from(payroll);
+        return PayrollResponse.from(payWithAccountCheck(payrollId));
     }
 
     private BigDecimal calculateOvertimePay(Employee employee, YearMonth yearMonth) {

@@ -11,7 +11,6 @@ import {
   ChevronRightIcon,
   ClockIcon,
   UserPlusIcon,
-  PlusIcon,
 } from "@heroicons/react/24/outline";
 
 import { dashboardMenuGroups } from "@/lib/dashboardMenu";
@@ -38,6 +37,7 @@ export default function DashboardHeader() {
   const isDailyAttendance = pathname === "/attendance/daily";
   const isMonthlyAttendance = pathname === "/attendance/monthly";
   const isLeaveApproval = pathname === "/leave/approve";
+  const isLeaveUsage = pathname === "/leave/status";
   const [monthlySelection, setMonthlySelection] = useState(currentMonth);
 
   useEffect(() => {
@@ -104,6 +104,7 @@ export default function DashboardHeader() {
               근태 등록
             </button>
           </>
+<<<<<<< HEAD
         ) : isMonthlyAttendance ? (
           <>
             <div className="flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-600">
@@ -112,12 +113,62 @@ export default function DashboardHeader() {
               <button type="button" onClick={() => changeMonth(1)} aria-label="다음 월" className="flex h-full w-9 items-center justify-center hover:bg-gray-50"><ChevronRightIcon className="h-4 w-4" /></button>
             </div>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("attendance:monthly-report"))} className="flex h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"><ArrowDownTrayIcon className="h-4 w-4" />리포트 출력</button>
+=======
+        ) : pathname === "/certificates" ? (
+          <>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("certificate:export"))}
+              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              일괄 다운로드
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("certificate:register"))}
+              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+            >
+              <PlusIcon className="w-4 h-4" />
+              발급 신청
+            </button>
+>>>>>>> 23e09a656b7f9bb93eb5d52a4e05e01a761cf2e7
           </>
+        ) : pathname === "/notices" ? (
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("notice:register"))}
+            className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+          >
+            <PlusIcon className="w-4 h-4" />
+            공지사항 등록
+          </button>
         ) : isLeaveApproval ? (
           <>
+<<<<<<< HEAD
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("leave:approval-export"))} className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"><ArrowDownTrayIcon className="h-4 w-4" />내보내기</button>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("leave:approval-pending"))} className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"><ClockIcon className="h-4 w-4" />승인 대기</button>
+=======
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("leave:approval-export"))}
+              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              내보내기
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("leave:approval-pending"))}
+              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+            >
+              <ClockIcon className="h-4 w-4" />
+              승인 대기만 보기
+            </button>
+>>>>>>> 23e09a656b7f9bb93eb5d52a4e05e01a761cf2e7
           </>
+        ) : isLeaveUsage ? (
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("leave:usage-report"))} className="flex h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"><ArrowDownTrayIcon className="h-4 w-4" />리포트 출력</button>
         ) : (
           <button
             type="button"

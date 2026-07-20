@@ -8,6 +8,11 @@ import EmployeeEditModal from "@/components/employee/EmployeeEditModal";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
+function authHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export default function EmployeesPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [editEmployee, setEditEmployee] = useState<any | null>(null);
@@ -18,6 +23,7 @@ export default function EmployeesPage() {
       try {
         const res = await fetch(`${API_BASE_URL}/employees/${id}`, {
           method: "DELETE",
+          headers: authHeaders(),
         });
         if (res.ok) {
           alert("삭제되었습니다.");

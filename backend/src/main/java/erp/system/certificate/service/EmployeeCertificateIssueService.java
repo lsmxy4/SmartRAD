@@ -9,8 +9,12 @@ import erp.system.common.exception.ErrorCode;
 import erp.system.employee.entity.Employee;
 import erp.system.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -31,6 +35,28 @@ public class EmployeeCertificateIssueService {
         return certificateIssueRepository.findAllByEmployee_EmployeeIdOrderByApplicationDateDesc(employeeId).stream()
                 .map(EmployeeCertificateIssueResponse::from)
                 .toList();
+    }
+
+    public Page<EmployeeCertificateIssueResponse> getList(Long employeeId, String certificateType, String approvalStatus,
+                                                            String keyword, Pageable pageable) {
+        Specification<EmployeeCertificateIssue> spec = (root, query, cb) -> {
+            var predicate = cb.conjunction();
+            if (employeeId != null) {
+                predicate = cb.and(predicate, cb.equal(root.get("employee").get("employeeId"), employeeId));
+            }
+            if (StringUtils.hasText(certificateType)) {
+                predicate = cb.and(predicate, cb.equal(root.get("certificateType"), certificateType));
+            }
+            if (StringUtils.hasText(approvalStatus)) {
+                predicate = cb.and(predicate, cb.equal(root.get("approvalStatus"), approvalStatus));
+            }
+            if (StringUtils.hasText(keyword)) {
+                predicate = cb.and(predicate, cb.like(root.get("employee").get("name"), "%" + keyword + "%"));
+            }
+            return predicate;
+        };
+
+        return certificateIssueRepository.findAll(spec, pageable).map(EmployeeCertificateIssueResponse::from);
     }
 
     @Transactional

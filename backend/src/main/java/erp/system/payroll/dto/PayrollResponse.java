@@ -16,7 +16,8 @@ public record PayrollResponse(
         BigDecimal totalPayAmount,
         BigDecimal totalDeductionAmount,
         BigDecimal realPayAmount,
-        String payrollStatusCode
+        String payrollStatusCode,
+        String reviewStatusCode
 ) {
     public static PayrollResponse from(Payroll payroll) {
         return new PayrollResponse(
@@ -30,7 +31,8 @@ public record PayrollResponse(
                 payroll.getTotalPayAmount(),
                 payroll.getTotalDeductionAmount(),
                 payroll.getRealPayAmount(),
-                payroll.getPayrollStatusCode()
+                payroll.getPayrollStatusCode(),
+                payroll.getReviewStatusCode()
         );
     }
 }

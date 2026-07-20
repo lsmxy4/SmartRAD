@@ -75,3 +75,19 @@ body {
 .dark-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+@media print {
+  body:has(.leave-usage-print) aside,
+  body:has(.leave-usage-print) > div header,
+  .leave-usage-no-print {
+    display: none !important;
+  }
+
+  body:has(.leave-usage-print) main {
+    padding: 0 !important;
+  }
+
+  .leave-usage-print {
+    max-width: none !important;
+  }
+}

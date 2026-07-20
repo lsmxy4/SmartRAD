@@ -111,4 +111,11 @@ public class EmployeeAppointmentService {
 
         return EmployeeAppointmentResponse.from(appointment);
     }
+
+    @Transactional
+    public void delete(Long id) {
+        EmployeeAppointment appointment = employeeAppointmentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPOINTMENT_NOT_FOUND));
+        appointment.markDeleted();
+    }
 }

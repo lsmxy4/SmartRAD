@@ -4,6 +4,11 @@ export interface LeaveRequestResponse {
   leaveRequestId: number;
   employeeId: number;
   employeeName: string;
+  employeeNo: string | null;
+  departmentId: number | null;
+  departmentName: string | null;
+  positionName: string | null;
+  email: string | null;
   leaveTypeId: number;
   leaveTypeName: string;
   startDate: string;
@@ -13,7 +18,30 @@ export interface LeaveRequestResponse {
   status: LeaveStatus;
   approverId: number | null;
   approverName: string | null;
+  rejectionReason: string | null;
+  processedAt: string | null;
   createdAt: string;
+}
+
+export interface LeaveRequestPage {
+  content: LeaveRequestResponse[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface LeaveRequestSummary {
+  totalCount: number;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+}
+
+export interface LeaveRequestBulkApproveResult {
+  leaveRequestId: number;
+  success: boolean;
+  failureReason: string | null;
 }
 
 export interface LeaveTypeResponse {
@@ -24,24 +52,7 @@ export interface LeaveTypeResponse {
   note: string | null;
 }
 
-export interface EmployeeSummary {
-  employeeId: number;
-  employeeNo: string;
-  name: string;
-  departmentName: string | null;
-  positionName: string | null;
-  employeeStatusCode: string;
-  email: string;
-}
-
-export interface EmployeePage { content: EmployeeSummary[]; totalElements: number; }
-
-export interface LeaveApprovalRow extends LeaveRequestResponse {
-  employeeNo: string | null;
-  departmentName: string | null;
-  positionName: string | null;
-  email: string | null;
-}
+export type LeaveApprovalRow = LeaveRequestResponse;
 
 export interface LeaveFilters {
   startDate: string;

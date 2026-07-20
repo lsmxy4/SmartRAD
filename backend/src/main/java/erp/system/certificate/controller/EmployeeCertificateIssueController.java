@@ -6,6 +6,8 @@ import erp.system.certificate.dto.EmployeeCertificateIssueResponse;
 import erp.system.certificate.service.EmployeeCertificateIssueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,17 @@ public class EmployeeCertificateIssueController {
     @GetMapping
     public List<EmployeeCertificateIssueResponse> getByEmployee(@RequestParam Long employeeId) {
         return certificateIssueService.getByEmployee(employeeId);
+    }
+
+    @GetMapping("/search")
+    public Page<EmployeeCertificateIssueResponse> getList(
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) String certificateType,
+            @RequestParam(required = false) String approvalStatus,
+            @RequestParam(required = false) String keyword,
+            Pageable pageable
+    ) {
+        return certificateIssueService.getList(employeeId, certificateType, approvalStatus, keyword, pageable);
     }
 
     @PostMapping

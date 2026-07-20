@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDownTrayIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   DocumentArrowUpIcon,
@@ -10,7 +11,8 @@ import {
   UserMinusIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
@@ -31,10 +33,26 @@ interface EmployeeResponse {
   updatedAt: string | null;
 }
 
-interface EmployeePage {
-  content: Pick<EmployeeResponse, "employeeId">[];
-  totalElements: number;
+interface EmploymentTypeOption {
+  employmentTypeId: number;
+  employmentTypeName: string;
 }
+
+interface EmployeeBulkResult {
+  employeeId: number;
+  success: boolean;
+  failureReason: string | null;
+}
+
+type BulkPayrollItem = {
+  employeeId: number;
+  employeeNo: string;
+  name: string;
+  baseSalary: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+};
 
 type PayrollBasicRow = {
   employeeId: number;
@@ -150,45 +168,69 @@ export default function PayrollBasicPage() {
   const [accountHolderInput, setAccountHolderInput] = useState("");
   const [modalError, setModalError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [employmentTypeOptions, setEmploymentTypeOptions] = useState<
+    EmploymentTypeOption[]
+  >([]);
+  const [bulkEmploymentTypeOpen, setBulkEmploymentTypeOpen] = useState(false);
+  const [bulkEmploymentTypeValue, setBulkEmploymentTypeValue] = useState("");
+  const [bulkEmploymentTypeError, setBulkEmploymentTypeError] = useState("");
+  const [bulkEmploymentTypeSaving, setBulkEmploymentTypeSaving] =
+    useState(false);
+  const [bulkPayrollOpen, setBulkPayrollOpen] = useState(false);
+  const [bulkPayrollItems, setBulkPayrollItems] = useState<BulkPayrollItem[]>(
+    [],
+  );
+  const [bulkPayrollError, setBulkPayrollError] = useState("");
+  const [bulkPayrollSaving, setBulkPayrollSaving] = useState(false);
+  const [excelUploading, setExcelUploading] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const listRes = await fetch(
+        `${API_BASE_URL}/employees/payroll-summary`,
+        { headers: authHeaders() },
+      );
+      if (!listRes.ok) throw new Error("직원 급여 기본정보를 불러오지 못했습니다.");
+
+      const details = (await listRes.json()) as EmployeeResponse[];
+      const sorted = [...details].sort((a, b) => a.name.localeCompare(b.name, "ko"));
+
+      setEmployees(sorted.map(toRow));
+      setTotalEmployees(sorted.length);
+    } catch (error) {
+      console.error("Failed to fetch payroll basic employees", error);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "급여 기본정보를 불러오지 못했습니다.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      setLoading(true);
-      setErrorMessage("");
+    fetchEmployees();
+  }, []);
 
+  useEffect(() => {
+    const fetchEmploymentTypes = async () => {
       try {
-        const listRes = await fetch(
-          `${API_BASE_URL}/employees?page=0&size=1000&sort=name,asc`,
-        );
-        if (!listRes.ok) throw new Error("직원 목록을 불러오지 못했습니다.");
-
-        const page: EmployeePage = await listRes.json();
-        const details = await Promise.all(
-          (page.content ?? []).map(async ({ employeeId }) => {
-            const detailRes = await fetch(
-              `${API_BASE_URL}/employees/${employeeId}`,
-            );
-            if (!detailRes.ok)
-              throw new Error("직원 급여 기본정보를 불러오지 못했습니다.");
-            return (await detailRes.json()) as EmployeeResponse;
-          }),
-        );
-
-        setEmployees(details.map(toRow));
-        setTotalEmployees(page.totalElements ?? details.length);
+        const res = await fetch(`${API_BASE_URL}/employment-types`, { headers: authHeaders() });
+        if (!res.ok) throw new Error("급여형태 목록을 불러오지 못했습니다.");
+        const data = (await res.json()) as EmploymentTypeOption[];
+        setEmploymentTypeOptions(data);
       } catch (error) {
-        console.error("Failed to fetch payroll basic employees", error);
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "급여 기본정보를 불러오지 못했습니다.",
-        );
-      } finally {
-        setLoading(false);
+        console.error("Failed to fetch employment types", error);
       }
     };
 
-    fetchEmployees();
+    fetchEmploymentTypes();
   }, []);
 
   const registeredCount = employees.filter(
@@ -397,6 +439,328 @@ export default function PayrollBasicPage() {
     }
   };
 
+  const toggleSelectEmployee = (employeeId: number) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(employeeId)) {
+        next.delete(employeeId);
+      } else {
+        next.add(employeeId);
+      }
+      return next;
+    });
+  };
+
+  const allFilteredSelected =
+    filteredEmployees.length > 0 &&
+    filteredEmployees.every((employee) => selectedIds.has(employee.employeeId));
+
+  const toggleSelectAll = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allFilteredSelected) {
+        filteredEmployees.forEach((employee) => next.delete(employee.employeeId));
+      } else {
+        filteredEmployees.forEach((employee) => next.add(employee.employeeId));
+      }
+      return next;
+    });
+  };
+
+  const openBulkEmploymentTypeModal = () => {
+    if (selectedIds.size === 0) {
+      window.alert("급여형태를 변경할 직원을 선택해주세요.");
+      return;
+    }
+    setBulkEmploymentTypeValue("");
+    setBulkEmploymentTypeError("");
+    setBulkEmploymentTypeOpen(true);
+  };
+
+  const closeBulkEmploymentTypeModal = () => {
+    if (bulkEmploymentTypeSaving) return;
+    setBulkEmploymentTypeOpen(false);
+  };
+
+  const saveBulkEmploymentType = async () => {
+    if (!bulkEmploymentTypeValue) {
+      setBulkEmploymentTypeError("변경할 급여형태를 선택해주세요.");
+      return;
+    }
+
+    setBulkEmploymentTypeSaving(true);
+    setBulkEmploymentTypeError("");
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/employees/bulk-employment-type`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            employeeIds: Array.from(selectedIds),
+            employmentTypeId: Number(bulkEmploymentTypeValue),
+          }),
+        },
+      );
+      if (!res.ok) throw new Error("급여형태 일괄 변경에 실패했습니다.");
+
+      const results = (await res.json()) as EmployeeBulkResult[];
+      const successCount = results.filter((result) => result.success).length;
+      const failCount = results.length - successCount;
+
+      window.alert(
+        failCount === 0
+          ? `${successCount}명의 급여형태를 변경했습니다.`
+          : `${successCount}명 변경 성공, ${failCount}명 실패했습니다.`,
+      );
+
+      setBulkEmploymentTypeOpen(false);
+      setSelectedIds(new Set());
+      await fetchEmployees();
+    } catch (error) {
+      console.error("Failed to bulk update employment type", error);
+      setBulkEmploymentTypeError(
+        error instanceof Error
+          ? error.message
+          : "급여형태 일괄 변경에 실패했습니다.",
+      );
+    } finally {
+      setBulkEmploymentTypeSaving(false);
+    }
+  };
+
+  const openBulkPayrollModal = () => {
+    if (selectedIds.size === 0) {
+      window.alert("급여정보를 등록할 직원을 선택해주세요.");
+      return;
+    }
+
+    const selectedRows = employees.filter((employee) =>
+      selectedIds.has(employee.employeeId),
+    );
+    const unregistered = selectedRows.filter(
+      (employee) => employee.status === "미등록",
+    );
+    const alreadyRegisteredCount = selectedRows.length - unregistered.length;
+
+    if (unregistered.length === 0) {
+      window.alert("선택한 직원 중 급여정보가 미등록인 직원이 없습니다.");
+      return;
+    }
+    if (alreadyRegisteredCount > 0) {
+      window.alert(
+        `이미 등록완료된 ${alreadyRegisteredCount}명은 제외하고, 미등록 ${unregistered.length}명만 일괄등록을 진행합니다.`,
+      );
+    }
+
+    setBulkPayrollItems(
+      unregistered.map((employee) => ({
+        employeeId: employee.employeeId,
+        employeeNo: employee.employeeNo,
+        name: employee.name,
+        baseSalary: "",
+        bankName: "",
+        accountNumber: "",
+        accountHolder: employee.name,
+      })),
+    );
+    setBulkPayrollError("");
+    setBulkPayrollOpen(true);
+  };
+
+  const closeBulkPayrollModal = () => {
+    if (bulkPayrollSaving) return;
+    setBulkPayrollOpen(false);
+  };
+
+  const updateBulkPayrollItem = (
+    employeeId: number,
+    field: keyof Omit<BulkPayrollItem, "employeeId" | "employeeNo" | "name">,
+    value: string,
+  ) => {
+    setBulkPayrollItems((current) =>
+      current.map((item) =>
+        item.employeeId === employeeId ? { ...item, [field]: value } : item,
+      ),
+    );
+  };
+
+  const saveBulkPayrollBasic = async () => {
+    const parsedItems: {
+      employeeId: number;
+      baseSalary: number;
+      bankName: string | null;
+      accountNumber: string | null;
+      accountHolder: string | null;
+    }[] = [];
+
+    for (const item of bulkPayrollItems) {
+      const baseSalary = Number(item.baseSalary.replace(/,/g, ""));
+      if (
+        !item.baseSalary.trim() ||
+        !Number.isFinite(baseSalary) ||
+        baseSalary < 0
+      ) {
+        setBulkPayrollError(
+          `${item.name}(${item.employeeNo})의 기본급을 0 이상의 숫자로 입력해주세요.`,
+        );
+        return;
+      }
+      parsedItems.push({
+        employeeId: item.employeeId,
+        baseSalary,
+        bankName: item.bankName.trim() || null,
+        accountNumber: item.accountNumber.trim() || null,
+        accountHolder: item.accountHolder.trim() || null,
+      });
+    }
+
+    setBulkPayrollSaving(true);
+    setBulkPayrollError("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees/bulk-payroll-basic`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ items: parsedItems }),
+      });
+      if (!res.ok) throw new Error("급여정보 일괄등록에 실패했습니다.");
+
+      const results = (await res.json()) as EmployeeBulkResult[];
+      const successCount = results.filter((result) => result.success).length;
+      const failCount = results.length - successCount;
+
+      window.alert(
+        failCount === 0
+          ? `${successCount}명의 급여정보를 등록했습니다.`
+          : `${successCount}명 등록 성공, ${failCount}명 실패했습니다.`,
+      );
+
+      setBulkPayrollOpen(false);
+      setSelectedIds(new Set());
+      await fetchEmployees();
+    } catch (error) {
+      console.error("Failed to bulk register payroll basic info", error);
+      setBulkPayrollError(
+        error instanceof Error
+          ? error.message
+          : "급여정보 일괄등록에 실패했습니다.",
+      );
+    } finally {
+      setBulkPayrollSaving(false);
+    }
+  };
+
+  const downloadExcelTemplate = () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["사번", "기본급", "은행", "계좌번호", "예금주"],
+      ["E2026001", 50000000, "국민은행", "123-456-7890", "홍길동"],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "급여정보");
+    XLSX.writeFile(workbook, "급여정보_일괄등록_양식.xlsx");
+  };
+
+  const handleExcelUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setExcelUploading(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+        defval: "",
+      });
+
+      if (rows.length === 0) {
+        window.alert("엑셀 파일에 데이터가 없습니다.");
+        return;
+      }
+
+      const byEmployeeNo = new Map(
+        employees.map((employee) => [employee.employeeNo, employee]),
+      );
+      const items: {
+        employeeId: number;
+        baseSalary: number;
+        bankName: string | null;
+        accountNumber: string | null;
+        accountHolder: string | null;
+      }[] = [];
+      const notFound: string[] = [];
+      const invalid: string[] = [];
+
+      rows.forEach((row, index) => {
+        const employeeNo = String(row["사번"] ?? "").trim();
+        if (!employeeNo) return;
+        const target = byEmployeeNo.get(employeeNo);
+        if (!target) {
+          notFound.push(employeeNo);
+          return;
+        }
+        const baseSalary = Number(
+          String(row["기본급"] ?? "").replace(/,/g, ""),
+        );
+        if (!Number.isFinite(baseSalary) || baseSalary < 0) {
+          invalid.push(`${index + 2}행(${employeeNo})`);
+          return;
+        }
+        items.push({
+          employeeId: target.employeeId,
+          baseSalary,
+          bankName: String(row["은행"] ?? "").trim() || null,
+          accountNumber: String(row["계좌번호"] ?? "").trim() || null,
+          accountHolder: String(row["예금주"] ?? "").trim() || null,
+        });
+      });
+
+      if (items.length === 0) {
+        window.alert(
+          "등록할 수 있는 유효한 행이 없습니다. 사번과 기본급을 확인해주세요.",
+        );
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/employees/bulk-payroll-basic`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) throw new Error("엑셀 일괄등록에 실패했습니다.");
+
+      const results = (await res.json()) as EmployeeBulkResult[];
+      const successCount = results.filter((result) => result.success).length;
+      const failCount = results.length - successCount;
+
+      const messages = [`${successCount}명 등록 성공`];
+      if (failCount > 0) messages.push(`${failCount}명 실패`);
+      if (notFound.length > 0)
+        messages.push(
+          `사번 불일치 ${notFound.length}건(${notFound.slice(0, 5).join(", ")}${notFound.length > 5 ? " 외" : ""})`,
+        );
+      if (invalid.length > 0)
+        messages.push(`기본급 형식 오류 ${invalid.length}건`);
+
+      window.alert(messages.join("\n"));
+      await fetchEmployees();
+    } catch (error) {
+      console.error("Failed to upload excel", error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "엑셀 파일을 처리하지 못했습니다.",
+      );
+    } finally {
+      setExcelUploading(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-5 text-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -413,9 +777,29 @@ export default function PayrollBasicPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={downloadExcelTemplate}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            양식 다운로드
+          </button>
+          <input
+            ref={excelInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleExcelUpload}
+          />
+          <button
+            type="button"
+            onClick={() => excelInputRef.current?.click()}
+            disabled={excelUploading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
             <DocumentArrowUpIcon className="h-4 w-4" />
-            엑셀 일괄등록
+            {excelUploading ? "등록 중..." : "엑셀 일괄등록"}
           </button>
           <button
             type="button"
@@ -534,10 +918,18 @@ export default function PayrollBasicPage() {
             </span>
           </div>
           <div className="flex gap-2">
-            <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400">
+            <button
+              type="button"
+              onClick={openBulkPayrollModal}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
               급여정보 일괄등록
             </button>
-            <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400">
+            <button
+              type="button"
+              onClick={openBulkEmploymentTypeModal}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
               급여형태 변경
             </button>
           </div>
@@ -561,7 +953,17 @@ export default function PayrollBasicPage() {
                   "관리",
                 ].map((header) => (
                   <th key={header} className="whitespace-nowrap px-4 py-3">
-                    {header}
+                    {header === "" ? (
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAll}
+                        aria-label="전체 선택"
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                    ) : (
+                      header
+                    )}
                   </th>
                 ))}
               </tr>
@@ -597,6 +999,11 @@ export default function PayrollBasicPage() {
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
+                        checked={selectedIds.has(employee.employeeId)}
+                        onChange={() =>
+                          toggleSelectEmployee(employee.employeeId)
+                        }
+                        aria-label={`${employee.name} 선택`}
                         className="h-4 w-4 rounded border-slate-300"
                       />
                     </td>
@@ -667,7 +1074,7 @@ export default function PayrollBasicPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-400">
           <span>
             총 {filteredEmployees.length}명 조회 · {currentPage}/{totalPages}{" "}
-            페이지 · 0명 선택
+            페이지 · {selectedIds.size}명 선택
           </span>
           <div className="flex gap-1">
             <button
@@ -825,6 +1232,203 @@ export default function PayrollBasicPage() {
                 className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {bulkEmploymentTypeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <section className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">
+                  급여형태 변경
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  선택된 {selectedIds.size}명의 급여형태를 일괄 변경합니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBulkEmploymentTypeModal}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="급여형태 변경 닫기"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <label className="space-y-1 text-sm font-semibold text-slate-700">
+                <span>변경할 급여형태</span>
+                <select
+                  value={bulkEmploymentTypeValue}
+                  onChange={(event) =>
+                    setBulkEmploymentTypeValue(event.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                >
+                  <option value="">선택하세요</option>
+                  {employmentTypeOptions.map((option) => (
+                    <option
+                      key={option.employmentTypeId}
+                      value={option.employmentTypeId}
+                    >
+                      {option.employmentTypeName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {bulkEmploymentTypeError && (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
+                  {bulkEmploymentTypeError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeBulkEmploymentTypeModal}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={saveBulkEmploymentType}
+                disabled={bulkEmploymentTypeSaving}
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkEmploymentTypeSaving ? "변경 중..." : "변경"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {bulkPayrollOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <section className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">
+                  급여정보 일괄등록
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  미등록 {bulkPayrollItems.length}명의 기본급/계좌정보를 입력하세요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBulkPayrollModal}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="급여정보 일괄등록 닫기"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              {bulkPayrollItems.map((item) => (
+                <div
+                  key={item.employeeId}
+                  className="rounded-xl border border-slate-200 p-4"
+                >
+                  <p className="mb-3 text-sm font-bold text-slate-800">
+                    {item.employeeNo} · {item.name}
+                  </p>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label className="space-y-1 text-sm font-semibold text-slate-700">
+                      <span>기본급</span>
+                      <input
+                        value={item.baseSalary}
+                        onChange={(event) =>
+                          updateBulkPayrollItem(
+                            item.employeeId,
+                            "baseSalary",
+                            event.target.value,
+                          )
+                        }
+                        inputMode="numeric"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        placeholder="예: 3200000"
+                      />
+                    </label>
+                    <label className="space-y-1 text-sm font-semibold text-slate-700">
+                      <span>은행</span>
+                      <input
+                        value={item.bankName}
+                        onChange={(event) =>
+                          updateBulkPayrollItem(
+                            item.employeeId,
+                            "bankName",
+                            event.target.value,
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        placeholder="예: 국민은행"
+                      />
+                    </label>
+                    <label className="space-y-1 text-sm font-semibold text-slate-700">
+                      <span>계좌번호</span>
+                      <input
+                        value={item.accountNumber}
+                        onChange={(event) =>
+                          updateBulkPayrollItem(
+                            item.employeeId,
+                            "accountNumber",
+                            event.target.value,
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        placeholder="예: 123-456-7890"
+                      />
+                    </label>
+                    <label className="space-y-1 text-sm font-semibold text-slate-700">
+                      <span>예금주</span>
+                      <input
+                        value={item.accountHolder}
+                        onChange={(event) =>
+                          updateBulkPayrollItem(
+                            item.employeeId,
+                            "accountHolder",
+                            event.target.value,
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        placeholder="예금주명을 입력하세요"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+
+              {bulkPayrollError && (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
+                  {bulkPayrollError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeBulkPayrollModal}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={saveBulkPayrollBasic}
+                disabled={bulkPayrollSaving}
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkPayrollSaving ? "저장 중..." : "저장"}
               </button>
             </div>
           </section>

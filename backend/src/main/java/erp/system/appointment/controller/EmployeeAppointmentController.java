@@ -42,4 +42,10 @@ public class EmployeeAppointmentController {
     public ResponseEntity<EmployeeAppointmentResponse> create(@Valid @RequestBody EmployeeAppointmentCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(employeeAppointmentService.create(request));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        employeeAppointmentService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

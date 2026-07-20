@@ -1,5 +1,6 @@
 package erp.system.department.dto;
 
+import erp.system.common.util.SoftDeleteAware;
 import erp.system.department.entity.Department;
 
 public record DepartmentResponse(
@@ -9,11 +10,11 @@ public record DepartmentResponse(
         String parentDepartmentName
 ) {
     public static DepartmentResponse from(Department department) {
-        Department parent = department.getParentDepartment();
+        Department parent = SoftDeleteAware.resolve(department.getParentDepartment(), Department::getDepartmentName);
         return new DepartmentResponse(
                 department.getDepartmentId(),
                 department.getDepartmentName(),
-                parent != null ? parent.getDepartmentId() : null,
+                SoftDeleteAware.identifierOf(parent, () -> parent.getDepartmentId()),
                 parent != null ? parent.getDepartmentName() : null
         );
     }

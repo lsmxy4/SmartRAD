@@ -5,6 +5,11 @@ import { XMarkIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
+function authHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "재직", selectedClasses: "border-emerald-500 bg-emerald-50 text-emerald-600" },
   { value: "LEAVE", label: "휴직", selectedClasses: "border-orange-500 bg-orange-50 text-orange-600" },
@@ -47,7 +52,7 @@ export default function EmployeeEditModal({ employee, onClose, onSave }: any) {
     try {
       const res = await fetch(`${API_BASE_URL}/employees/${employee.employeeId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(formData),
       });
       if (res.ok) {

@@ -26,12 +26,15 @@ public enum ErrorCode {
     LEAVE_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "휴가 신청 내역을 찾을 수 없습니다."),
     INSUFFICIENT_LEAVE_BALANCE(HttpStatus.BAD_REQUEST, "잔여 휴가가 부족합니다."),
     INVALID_LEAVE_REQUEST_STATUS(HttpStatus.BAD_REQUEST, "이미 처리된 휴가 신청입니다."),
+    DUPLICATE_LEAVE_REQUEST_PERIOD(HttpStatus.CONFLICT, "해당 기간에 이미 신청되었거나 승인된 휴가가 있습니다."),
     ALLOWANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "수당 유형을 찾을 수 없습니다."),
     PAYROLL_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "급여 항목을 찾을 수 없습니다."),
     PAYROLL_NOT_FOUND(HttpStatus.NOT_FOUND, "급여 내역을 찾을 수 없습니다."),
     BASE_SALARY_NOT_SET(HttpStatus.BAD_REQUEST, "기본급이 설정되지 않았습니다."),
     ALREADY_PAID_PAYROLL(HttpStatus.CONFLICT, "이미 지급 처리된 급여입니다."),
     PAYROLL_NOT_CALCULATED(HttpStatus.BAD_REQUEST, "급여 계산이 완료되지 않았습니다."),
+    PAYROLL_INVALID_STATUS(HttpStatus.BAD_REQUEST, "현재 상태에서는 처리할 수 없습니다."),
+    PAYROLL_ACCOUNT_NOT_REGISTERED(HttpStatus.BAD_REQUEST, "급여 계좌 정보가 등록되지 않았습니다."),
     NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "공지사항을 찾을 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 

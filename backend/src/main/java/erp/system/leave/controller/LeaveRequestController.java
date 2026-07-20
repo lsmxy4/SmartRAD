@@ -1,15 +1,23 @@
 package erp.system.leave.controller;
 
+import erp.system.leave.dto.LeaveRequestBulkApproveRequest;
+import erp.system.leave.dto.LeaveRequestBulkApproveResult;
 import erp.system.leave.dto.LeaveRequestCreateRequest;
+import erp.system.leave.dto.LeaveRequestRejectRequest;
 import erp.system.leave.dto.LeaveRequestResponse;
+import erp.system.leave.dto.LeaveRequestSummaryResponse;
 import erp.system.leave.service.LeaveRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -27,6 +35,35 @@ public class LeaveRequestController {
         return leaveRequestService.getList(employeeId, status);
     }
 
+    @GetMapping("/search")
+    public Page<LeaveRequestResponse> getPagedList(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long leaveTypeId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long departmentId,
+            Pageable pageable
+    ) {
+        return leaveRequestService.getPagedList(startDate, endDate, leaveTypeId, status, keyword, departmentId, pageable);
+    }
+
+    @GetMapping("/summary")
+    public LeaveRequestSummaryResponse getSummary(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long leaveTypeId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long departmentId
+    ) {
+        return leaveRequestService.getSummary(startDate, endDate, leaveTypeId, keyword, departmentId);
+    }
+
+    @GetMapping("/{id}")
+    public LeaveRequestResponse getById(@PathVariable Long id) {
+        return leaveRequestService.getById(id);
+    }
+
     @PostMapping
     public ResponseEntity<LeaveRequestResponse> create(@Valid @RequestBody LeaveRequestCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(leaveRequestService.create(request));
@@ -38,7 +75,14 @@ public class LeaveRequestController {
     }
 
     @PatchMapping("/{id}/reject")
-    public LeaveRequestResponse reject(@PathVariable Long id, @AuthenticationPrincipal Long approverId) {
-        return leaveRequestService.reject(id, approverId);
+    public LeaveRequestResponse reject(@PathVariable Long id, @AuthenticationPrincipal Long approverId,
+                                        @Valid @RequestBody LeaveRequestRejectRequest request) {
+        return leaveRequestService.reject(id, approverId, request.rejectionReason());
+    }
+
+    @PatchMapping("/bulk-approve")
+    public List<LeaveRequestBulkApproveResult> bulkApprove(@Valid @RequestBody LeaveRequestBulkApproveRequest request,
+                                                             @AuthenticationPrincipal Long approverId) {
+        return leaveRequestService.bulkApprove(request.leaveRequestIds(), approverId);
     }
 }

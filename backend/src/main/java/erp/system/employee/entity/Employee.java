@@ -141,6 +141,16 @@ public class Employee extends BaseEntity {
         this.baseSalary = baseSalary;
     }
 
+    public void changeEmploymentType(EmploymentType employmentType) {
+        this.employmentType = employmentType;
+    }
+
+    public void updatePayrollAccount(String bankName, String accountNumber, String accountHolder) {
+        this.bankName = bankName;
+        this.accountNumber = accountNumber;
+        this.accountHolder = accountHolder;
+    }
+
     public boolean isLoginable() {
         return isActive() && !isDeleted() && !STATUS_RESIGNED.equals(this.employeeStatusCode);
     }

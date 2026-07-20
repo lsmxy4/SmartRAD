@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -55,6 +56,12 @@ public class LeaveRequest extends CreatedAtEntity {
     @JoinColumn(name = "approver_id")
     private Employee approver;
 
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
+    @Column(name = "processed_at")
+    private LocalDateTime processedAt;
+
     @Builder
     public LeaveRequest(LeaveType leaveType, Employee employee, LocalDate startDate, LocalDate endDate, BigDecimal leaveDays, String reason) {
         this.leaveType = leaveType;
@@ -70,12 +77,15 @@ public class LeaveRequest extends CreatedAtEntity {
         validatePending();
         this.status = STATUS_APPROVED;
         this.approver = approver;
+        this.processedAt = LocalDateTime.now();
     }
 
-    public void reject(Employee approver) {
+    public void reject(Employee approver, String rejectionReason) {
         validatePending();
         this.status = STATUS_REJECTED;
         this.approver = approver;
+        this.rejectionReason = rejectionReason;
+        this.processedAt = LocalDateTime.now();
     }
 
     private void validatePending() {

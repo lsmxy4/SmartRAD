@@ -5,7 +5,11 @@ import erp.system.common.exception.ErrorCode;
 import erp.system.department.entity.Department;
 import erp.system.department.repository.DepartmentRepository;
 import erp.system.employee.dto.EmployeeBaseSalaryUpdateRequest;
+import erp.system.employee.dto.EmployeeBulkEmploymentTypeRequest;
+import erp.system.employee.dto.EmployeeBulkPayrollBasicRequest;
+import erp.system.employee.dto.EmployeeBulkResult;
 import erp.system.employee.dto.EmployeeCreateRequest;
+import erp.system.employee.dto.EmployeePayrollSummaryResponse;
 import erp.system.employee.dto.EmployeeResponse;
 import erp.system.employee.dto.EmployeeSummaryResponse;
 import erp.system.employee.dto.EmployeeUpdateRequest;
@@ -26,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Year;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +68,12 @@ public class EmployeeService {
         };
 
         return employeeRepository.findAll(spec, pageable).map(EmployeeSummaryResponse::from);
+    }
+
+    public List<EmployeePayrollSummaryResponse> getPayrollSummaryList() {
+        return employeeRepository.findAll().stream()
+                .map(EmployeePayrollSummaryResponse::from)
+                .toList();
     }
 
     @Transactional
@@ -134,6 +145,40 @@ public class EmployeeService {
         Employee employee = findActive(employeeId);
         employee.updateBaseSalary(request.baseSalary());
         return EmployeeResponse.from(employee);
+    }
+
+    @Transactional
+    public List<EmployeeBulkResult> bulkUpdateEmploymentType(List<Long> employeeIds, Long employmentTypeId) {
+        EmploymentType employmentType = employmentTypeRepository.findById(employmentTypeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYMENT_TYPE_NOT_FOUND));
+
+        return employeeIds.stream()
+                .map(employeeId -> {
+                    try {
+                        Employee employee = findActive(employeeId);
+                        employee.changeEmploymentType(employmentType);
+                        return new EmployeeBulkResult(employeeId, true, null);
+                    } catch (BusinessException e) {
+                        return new EmployeeBulkResult(employeeId, false, e.getMessage());
+                    }
+                })
+                .toList();
+    }
+
+    @Transactional
+    public List<EmployeeBulkResult> bulkRegisterPayrollBasic(List<EmployeeBulkPayrollBasicRequest.Item> items) {
+        return items.stream()
+                .map(item -> {
+                    try {
+                        Employee employee = findActive(item.employeeId());
+                        employee.updateBaseSalary(item.baseSalary());
+                        employee.updatePayrollAccount(item.bankName(), item.accountNumber(), item.accountHolder());
+                        return new EmployeeBulkResult(item.employeeId(), true, null);
+                    } catch (BusinessException e) {
+                        return new EmployeeBulkResult(item.employeeId(), false, e.getMessage());
+                    }
+                })
+                .toList();
     }
 
     private String generateEmployeeNo() {

@@ -1,7 +1,11 @@
 package erp.system.employee.controller;
 
 import erp.system.employee.dto.EmployeeBaseSalaryUpdateRequest;
+import erp.system.employee.dto.EmployeeBulkEmploymentTypeRequest;
+import erp.system.employee.dto.EmployeeBulkPayrollBasicRequest;
+import erp.system.employee.dto.EmployeeBulkResult;
 import erp.system.employee.dto.EmployeeCreateRequest;
+import erp.system.employee.dto.EmployeePayrollSummaryResponse;
 import erp.system.employee.dto.EmployeeResponse;
 import erp.system.employee.dto.EmployeeSummaryResponse;
 import erp.system.employee.dto.EmployeeUpdateRequest;
@@ -22,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 
 @RestController
@@ -39,6 +45,11 @@ public class EmployeeController {
             Pageable pageable
     ) {
         return employeeService.getList(keyword, departmentId, status, pageable);
+    }
+
+    @GetMapping("/payroll-summary")
+    public List<EmployeePayrollSummaryResponse> getPayrollSummaryList() {
+        return employeeService.getPayrollSummaryList();
     }
 
     @GetMapping("/{id}")
@@ -65,5 +76,15 @@ public class EmployeeController {
     @PatchMapping("/{id}/base-salary")
     public EmployeeResponse updateBaseSalary(@PathVariable Long id, @Valid @RequestBody EmployeeBaseSalaryUpdateRequest request) {
         return employeeService.updateBaseSalary(id, request);
+    }
+
+    @PatchMapping("/bulk-employment-type")
+    public List<EmployeeBulkResult> bulkUpdateEmploymentType(@Valid @RequestBody EmployeeBulkEmploymentTypeRequest request) {
+        return employeeService.bulkUpdateEmploymentType(request.employeeIds(), request.employmentTypeId());
+    }
+
+    @PatchMapping("/bulk-payroll-basic")
+    public List<EmployeeBulkResult> bulkRegisterPayrollBasic(@Valid @RequestBody EmployeeBulkPayrollBasicRequest request) {
+        return employeeService.bulkRegisterPayrollBasic(request.items());
     }
 }

@@ -41,7 +41,33 @@ interface EmployeeResponse {
   accountHolder: string | null;
 }
 
-type PaymentStatus = "지급완료" | "지급대기" | "지급실패";
+interface PayrollDetailItem {
+  payrollDetailId: number;
+  payrollItemMasterId: number | null;
+  itemName: string;
+  itemTypeCode: "EARNING" | "DEDUCTION";
+  amount: number;
+}
+
+interface PayrollDetailedResponse {
+  payroll: PayrollResponse;
+  details: PayrollDetailItem[];
+}
+
+interface PayrollBulkResult {
+  payrollId: number;
+  success: boolean;
+  failureReason: string | null;
+}
+
+interface ApiErrorBody {
+  code: string;
+  message: string;
+  timestamp: string;
+  fieldErrors: unknown;
+}
+
+type PaymentStatus = "지급완료" | "지급대기" | "지급보류" | "지급실패";
 type AccountStatus = "정상" | "미등록";
 
 type PaymentRow = {
@@ -93,7 +119,20 @@ function formatMonth(value: string) {
 function toPaymentStatus(status: string): PaymentStatus {
   if (status === "PAID") return "지급완료";
   if (status === "FAILED") return "지급실패";
+  if (status === "HOLD") return "지급보류";
   return "지급대기";
+}
+
+async function extractErrorMessage(res: Response, fallback: string) {
+  try {
+    const body = (await res.json()) as Partial<ApiErrorBody>;
+    if (body && typeof body.message === "string" && body.message.length > 0) {
+      return body.message;
+    }
+  } catch {
+    // ignore JSON parse failure and fall back to the default message
+  }
+  return fallback;
 }
 
 function maskAccount(accountNumber: string | null | undefined) {
@@ -138,6 +177,8 @@ function statusPillClass(status: PaymentStatus) {
       return "bg-cyan-50 text-cyan-700 ring-cyan-200";
     case "지급실패":
       return "bg-orange-50 text-orange-700 ring-orange-200";
+    case "지급보류":
+      return "bg-violet-50 text-violet-700 ring-violet-200";
     default:
       return "bg-indigo-50 text-indigo-700 ring-indigo-200";
   }
@@ -161,6 +202,17 @@ export default function PayrollProcessPage() {
   const [appliedFilters, setAppliedFilters] = useState<Filters>(initialFilters);
   const [currentPage, setCurrentPage] = useState(1);
   const [processingAll, setProcessingAll] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [actionLoading, setActionLoading] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [detailData, setDetailData] = useState<PayrollDetailedResponse | null>(
+    null,
+  );
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshRows = () => setRefreshKey((key) => key + 1);
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -206,7 +258,7 @@ export default function PayrollProcessPage() {
     };
 
     fetchPayrolls();
-  }, []);
+  }, [refreshKey]);
 
   const payrollMonths = useMemo(
     () => ["전체", ...new Set(rows.map((row) => row.paymentDate.slice(0, 7)))],
@@ -250,6 +302,7 @@ export default function PayrollProcessPage() {
 
   const completedRows = rows.filter((row) => row.paymentStatus === "지급완료");
   const waitingRows = rows.filter((row) => row.paymentStatus === "지급대기");
+  const holdRows = rows.filter((row) => row.paymentStatus === "지급보류");
   const failedRows = rows.filter((row) => row.paymentStatus === "지급실패");
   const totalExpectedAmount = rows.reduce((sum, row) => sum + row.netPay, 0);
   const completedAmount = completedRows.reduce(
@@ -257,12 +310,16 @@ export default function PayrollProcessPage() {
     0,
   );
   const waitingAmount = waitingRows.reduce((sum, row) => sum + row.netPay, 0);
+  const holdAmount = holdRows.reduce((sum, row) => sum + row.netPay, 0);
   const failedAmount = failedRows.reduce((sum, row) => sum + row.netPay, 0);
   const totalPages = Math.max(Math.ceil(filteredRows.length / pageSize), 1);
   const paginatedRows = filteredRows.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+  const allPageSelected =
+    paginatedRows.length > 0 &&
+    paginatedRows.every((row) => selectedIds.has(row.payrollId));
 
   const applyFilters = () => {
     setAppliedFilters(draftFilters);
@@ -277,6 +334,30 @@ export default function PayrollProcessPage() {
 
   const movePage = (page: number) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  };
+
+  const toggleRowSelected = (payrollId: number) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(payrollId)) {
+        next.delete(payrollId);
+      } else {
+        next.add(payrollId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allPageSelected) {
+        paginatedRows.forEach((row) => next.delete(row.payrollId));
+      } else {
+        paginatedRows.forEach((row) => next.add(row.payrollId));
+      }
+      return next;
+    });
   };
 
   const markAsPaid = async (payrollId: number) => {
@@ -336,6 +417,169 @@ export default function PayrollProcessPage() {
     window.alert(`급여 지급 처리 완료: 성공 ${succeeded}명${failed > 0 ? `, 실패 ${failed}명` : ""}`);
   };
 
+  const paySelected = async () => {
+    const targets = rows.filter(
+      (row) => selectedIds.has(row.payrollId) && row.paymentStatus === "지급대기",
+    );
+    if (targets.length === 0) {
+      window.alert("지급 대기 상태로 선택된 직원이 없습니다.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `선택한 ${targets.length}명에게 급여를 지급 처리하시겠습니까?`,
+      )
+    )
+      return;
+
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/payrolls/bulk-pay`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          payrollIds: targets.map((target) => target.payrollId),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "선택 지급 처리에 실패했습니다."),
+        );
+      }
+      const results = (await res.json()) as PayrollBulkResult[];
+      const succeeded = results.filter((result) => result.success).length;
+      const failed = results.length - succeeded;
+      window.alert(
+        `선택 지급 처리 완료: 성공 ${succeeded}명${failed > 0 ? `, 실패 ${failed}명` : ""}`,
+      );
+      setSelectedIds(new Set());
+      refreshRows();
+    } catch (error) {
+      console.error("Failed to bulk pay selected payrolls", error);
+      window.alert(
+        error instanceof Error ? error.message : "선택 지급 처리에 실패했습니다.",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const holdSelected = async () => {
+    const targets = rows.filter(
+      (row) => selectedIds.has(row.payrollId) && row.paymentStatus !== "지급완료",
+    );
+    if (targets.length === 0) {
+      window.alert("지급 보류로 전환할 수 있는 선택 항목이 없습니다.");
+      return;
+    }
+    if (
+      !window.confirm(`선택한 ${targets.length}명을 지급 보류 처리하시겠습니까?`)
+    )
+      return;
+
+    setActionLoading(true);
+    let succeeded = 0;
+    const failures: string[] = [];
+    for (const target of targets) {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/payrolls/${target.payrollId}/hold`,
+          { method: "PATCH", headers: authHeaders() },
+        );
+        if (!res.ok) {
+          throw new Error(
+            await extractErrorMessage(res, "지급 보류 처리에 실패했습니다."),
+          );
+        }
+        succeeded++;
+      } catch (error) {
+        failures.push(
+          `${target.name}: ${error instanceof Error ? error.message : "지급 보류 처리에 실패했습니다."}`,
+        );
+      }
+    }
+    setActionLoading(false);
+    window.alert(
+      `지급 보류 처리 완료: 성공 ${succeeded}명${failures.length > 0 ? `, 실패 ${failures.length}명\n${failures.join("\n")}` : ""}`,
+    );
+    setSelectedIds(new Set());
+    refreshRows();
+  };
+
+  const reprocessFailedSelected = async () => {
+    const targets = rows.filter(
+      (row) => selectedIds.has(row.payrollId) && row.paymentStatus === "지급실패",
+    );
+    if (targets.length === 0) {
+      window.alert("재처리할 지급 실패 건이 선택되지 않았습니다.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `선택한 ${targets.length}명의 실패 건을 재처리하시겠습니까?`,
+      )
+    )
+      return;
+
+    setActionLoading(true);
+    let succeeded = 0;
+    const failures: string[] = [];
+    for (const target of targets) {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/payrolls/${target.payrollId}/pay`,
+          { method: "PATCH", headers: authHeaders() },
+        );
+        if (!res.ok) {
+          throw new Error(await extractErrorMessage(res, "재처리에 실패했습니다."));
+        }
+        succeeded++;
+      } catch (error) {
+        failures.push(
+          `${target.name}: ${error instanceof Error ? error.message : "재처리에 실패했습니다."}`,
+        );
+      }
+    }
+    setActionLoading(false);
+    window.alert(
+      `재처리 완료: 성공 ${succeeded}명${failures.length > 0 ? `, 실패 ${failures.length}명\n${failures.join("\n")}` : ""}`,
+    );
+    setSelectedIds(new Set());
+    refreshRows();
+  };
+
+  const openPayrollDetail = async (payrollId: number) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError("");
+    setDetailData(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/payrolls/${payrollId}`, {
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "상세 정보를 불러오지 못했습니다."),
+        );
+      }
+      const data = (await res.json()) as PayrollDetailedResponse;
+      setDetailData(data);
+    } catch (error) {
+      console.error("Failed to load payroll detail", error);
+      setDetailError(
+        error instanceof Error ? error.message : "상세 정보를 불러오지 못했습니다.",
+      );
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closePayrollDetail = () => {
+    setDetailOpen(false);
+    setDetailData(null);
+    setDetailError("");
+  };
+
   const exportTransferFile = () => {
     const targets = filteredRows.filter((row) => row.paymentStatus === "지급대기");
     if (targets.length === 0) {
@@ -391,6 +635,15 @@ export default function PayrollProcessPage() {
       className: "border-indigo-200 bg-indigo-50",
       iconClassName: "bg-indigo-100 text-indigo-600",
       valueClassName: "text-indigo-600",
+    },
+    {
+      title: "지급 보류",
+      value: `${holdRows.length.toLocaleString("ko-KR")}명`,
+      description: formatCurrency(holdAmount),
+      icon: ExclamationTriangleIcon,
+      className: "border-violet-200 bg-violet-50",
+      iconClassName: "bg-violet-100 text-violet-600",
+      valueClassName: "text-violet-600",
     },
     {
       title: "지급 실패",
@@ -465,7 +718,7 @@ export default function PayrollProcessPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {summaryCards.map(({ icon: Icon, ...card }) => (
           <article
             key={card.title}
@@ -513,7 +766,7 @@ export default function PayrollProcessPage() {
             [
               "paymentStatus",
               "지급상태",
-              ["전체", "지급완료", "지급대기", "지급실패"],
+              ["전체", "지급완료", "지급대기", "지급보류", "지급실패"],
             ],
             ["accountStatus", "계좌상태", ["전체", "정상", "미등록"]],
           ].map(([key, label, options]) => (
@@ -588,18 +841,36 @@ export default function PayrollProcessPage() {
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600">
               지급 대기 {waitingRows.length.toLocaleString("ko-KR")}명
             </span>
+            <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-600">
+              지급 보류 {holdRows.length.toLocaleString("ko-KR")}명
+            </span>
             <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-600">
               지급 실패 {failedRows.length.toLocaleString("ko-KR")}명
             </span>
           </div>
           <div className="flex gap-2">
-            <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400">
+            <button
+              type="button"
+              onClick={paySelected}
+              disabled={actionLoading}
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
               선택 직원 지급 처리
             </button>
-            <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400">
+            <button
+              type="button"
+              onClick={holdSelected}
+              disabled={actionLoading}
+              className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-600 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
               지급 보류
             </button>
-            <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400">
+            <button
+              type="button"
+              onClick={reprocessFailedSelected}
+              disabled={actionLoading}
+              className="rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
               실패 건 재처리
             </button>
           </div>
@@ -609,8 +880,16 @@ export default function PayrollProcessPage() {
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs font-bold text-slate-500">
               <tr>
+                <th className="whitespace-nowrap px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={toggleSelectAllOnPage}
+                    aria-label="전체 선택"
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                </th>
                 {[
-                  "",
                   "사번",
                   "성명",
                   "부서",
@@ -663,12 +942,17 @@ export default function PayrollProcessPage() {
                         ? "bg-orange-50/60"
                         : row.paymentStatus === "지급대기"
                           ? "bg-indigo-50/60"
-                          : "bg-white"
+                          : row.paymentStatus === "지급보류"
+                            ? "bg-violet-50/60"
+                            : "bg-white"
                     }
                   >
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
+                        checked={selectedIds.has(row.payrollId)}
+                        onChange={() => toggleRowSelected(row.payrollId)}
+                        aria-label={`${row.name} 선택`}
                         className="h-4 w-4 rounded border-slate-300"
                       />
                     </td>
@@ -741,7 +1025,8 @@ export default function PayrollProcessPage() {
                       ) : (
                         <button
                           type="button"
-                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600"
+                          onClick={() => openPayrollDetail(row.payrollId)}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
                         >
                           상세
                         </button>
@@ -813,7 +1098,7 @@ export default function PayrollProcessPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-400">
           <span>
             총 {filteredRows.length}명 조회 · {currentPage}/{totalPages} 페이지
-            · 0명 선택
+            · {selectedIds.size}명 선택
           </span>
           <div className="flex gap-1">
             <button
@@ -847,6 +1132,158 @@ export default function PayrollProcessPage() {
           </div>
         </div>
       </section>
+
+      {detailOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  급여 지급 상세
+                </h3>
+                {detailData && (
+                  <p className="mt-1 text-sm text-slate-500">
+                    {detailData.payroll.employeeNameSnapshot} ·{" "}
+                    {formatMonth(detailData.payroll.payrollYearMonth)}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={closePayrollDetail}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="mt-4">
+              {detailLoading && (
+                <p className="py-8 text-center text-sm font-semibold text-slate-400">
+                  상세 정보를 불러오는 중입니다.
+                </p>
+              )}
+              {!detailLoading && detailError && (
+                <p className="py-8 text-center text-sm font-semibold text-rose-500">
+                  {detailError}
+                </p>
+              )}
+              {!detailLoading && !detailError && detailData && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400">
+                        부서 / 직급
+                      </p>
+                      <p className="mt-1 font-bold text-slate-800">
+                        {detailData.payroll.departmentNameSnapshot ?? "미지정"}{" "}
+                        {detailData.payroll.positionNameSnapshot ?? ""}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400">
+                        지급예정일
+                      </p>
+                      <p className="mt-1 font-bold text-slate-800">
+                        {detailData.payroll.paymentDate ?? "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400">
+                        지급상태
+                      </p>
+                      <span
+                        className={`mt-1 inline-block rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusPillClass(toPaymentStatus(detailData.payroll.payrollStatusCode))}`}
+                      >
+                        ● {toPaymentStatus(detailData.payroll.payrollStatusCode)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="mb-2 text-sm font-bold text-slate-700">
+                      지급 항목
+                    </h4>
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-xs font-bold text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2">구분</th>
+                          <th className="px-3 py-2">항목명</th>
+                          <th className="px-3 py-2 text-right">금액</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {detailData.details.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={3}
+                              className="px-3 py-6 text-center text-slate-400"
+                            >
+                              지급 항목 내역이 없습니다.
+                            </td>
+                          </tr>
+                        )}
+                        {detailData.details.map((detail) => (
+                          <tr key={detail.payrollDetailId}>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                  detail.itemTypeCode === "EARNING"
+                                    ? "bg-teal-50 text-teal-600"
+                                    : "bg-orange-50 text-orange-600"
+                                }`}
+                              >
+                                {detail.itemTypeCode === "EARNING"
+                                  ? "지급"
+                                  : "공제"}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              {detail.itemName}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-800">
+                              {formatCurrency(detail.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        지급총액
+                      </p>
+                      <p className="mt-1 font-extrabold text-slate-900">
+                        {formatCurrency(detailData.payroll.totalPayAmount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        공제합계
+                      </p>
+                      <p className="mt-1 font-extrabold text-slate-900">
+                        {formatCurrency(
+                          detailData.payroll.totalDeductionAmount,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        실지급액
+                      </p>
+                      <p className="mt-1 font-extrabold text-teal-600">
+                        {formatCurrency(detailData.payroll.realPayAmount)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

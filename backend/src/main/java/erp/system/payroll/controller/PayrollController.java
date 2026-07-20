@@ -1,5 +1,7 @@
 package erp.system.payroll.controller;
 
+import erp.system.payroll.dto.PayrollBulkPayRequest;
+import erp.system.payroll.dto.PayrollBulkResult;
 import erp.system.payroll.dto.PayrollCalculateRequest;
 import erp.system.payroll.dto.PayrollDetailedResponse;
 import erp.system.payroll.dto.PayrollResponse;
@@ -49,5 +51,30 @@ public class PayrollController {
     @PatchMapping("/{id}/pay")
     public PayrollResponse pay(@PathVariable Long id) {
         return payrollService.pay(id);
+    }
+
+    @PatchMapping("/{id}/confirm")
+    public PayrollResponse confirm(@PathVariable Long id) {
+        return payrollService.confirm(id);
+    }
+
+    @PatchMapping("/{id}/exclude")
+    public PayrollResponse exclude(@PathVariable Long id) {
+        return payrollService.exclude(id);
+    }
+
+    @PatchMapping("/{id}/review-complete")
+    public PayrollResponse completeReview(@PathVariable Long id) {
+        return payrollService.completeReview(id);
+    }
+
+    @PatchMapping("/{id}/hold")
+    public PayrollResponse hold(@PathVariable Long id) {
+        return payrollService.hold(id);
+    }
+
+    @PatchMapping("/bulk-pay")
+    public List<PayrollBulkResult> bulkPay(@Valid @RequestBody PayrollBulkPayRequest request) {
+        return payrollService.bulkPay(request.payrollIds());
     }
 }
