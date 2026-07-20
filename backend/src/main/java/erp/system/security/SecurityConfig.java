@@ -39,6 +39,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 403 발생 시 서블릿 컨테이너가 내부적으로 /error로 forward하는데, 이 경로가 인증을 요구하면
+                        // 재요청 시 인증 정보가 없어 403이 401로 덮어써지므로 명시적으로 열어둔다.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/employees").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/departments/**").permitAll()
@@ -52,7 +55,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/employees/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/employees/**").hasRole("ADMIN")
 
-                        // 인사 발령 - 관리자 전용
+                        // 인사 발령 - 본인 이력 조회는 로그인만 하면 가능, 나머지는 관리자 전용
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/me").authenticated()
                         .requestMatchers("/api/appointments/**").hasRole("ADMIN")
 
                         // 근태 - 전사 현황 조회/수동등록은 관리자, 본인 출퇴근 체크는 로그인만 하면 가능
@@ -82,7 +86,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/notices/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/notices/**").hasRole("ADMIN")
 
-                        // 급여 - 계산/지급처리/항목관리/수당관리는 전부 관리자 전용
+                        // 급여 - 본인 명세서 조회는 로그인만 하면 가능, 계산/지급처리/항목관리/수당관리는 관리자 전용
+                        .requestMatchers(HttpMethod.GET, "/api/payrolls/me", "/api/payrolls/me/*").authenticated()
                         .requestMatchers("/api/payrolls/**").hasRole("ADMIN")
                         .requestMatchers("/api/payroll-items/**").hasRole("ADMIN")
                         .requestMatchers("/api/allowances/**").hasRole("ADMIN")

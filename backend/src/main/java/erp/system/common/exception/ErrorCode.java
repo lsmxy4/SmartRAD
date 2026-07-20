@@ -39,6 +39,7 @@ public enum ErrorCode {
     PAYROLL_INVALID_STATUS(HttpStatus.BAD_REQUEST, "현재 상태에서는 처리할 수 없습니다."),
     PAYROLL_ACCOUNT_NOT_REGISTERED(HttpStatus.BAD_REQUEST, "급여 계좌 정보가 등록되지 않았습니다."),
     NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "공지사항을 찾을 수 없습니다."),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
 

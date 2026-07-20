@@ -51,8 +51,9 @@ public class EmployeeService {
     private final PasswordEncoder passwordEncoder;
     private final EmployeeLeaveBalanceService employeeLeaveBalanceService;
 
-    public EmployeeResponse getById(Long employeeId){
-        return EmployeeResponse.from(findActive(employeeId));
+    public EmployeeResponse getById(Long employeeId, Long requesterId, boolean requesterIsAdmin) {
+        boolean includeSensitive = requesterIsAdmin || employeeId.equals(requesterId);
+        return EmployeeResponse.from(findActive(employeeId), includeSensitive);
     }
 
     public Page<EmployeeSummaryResponse> getList(String keyword, Long departmentId, String status, Pageable pageable) {

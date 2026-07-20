@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
@@ -25,6 +26,11 @@ public class EmployeeAppointmentController {
     @GetMapping
     public List<EmployeeAppointmentResponse> getByEmployee(@RequestParam Long employeeId) {
         return employeeAppointmentService.getByEmployee(employeeId);
+    }
+
+    @GetMapping("/me")
+    public List<EmployeeAppointmentResponse> getMyAppointments(@AuthenticationPrincipal Long requesterId) {
+        return employeeAppointmentService.getByEmployee(requesterId);
     }
 
     @GetMapping("/search")

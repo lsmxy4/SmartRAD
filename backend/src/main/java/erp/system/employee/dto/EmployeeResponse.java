@@ -73,4 +73,19 @@ public record EmployeeResponse (
                 employee.getUpdatedAt()
         );
     }
+
+    public static EmployeeResponse from(Employee employee, boolean includeSensitive) {
+        EmployeeResponse response = from(employee);
+        if (includeSensitive) {
+            return response;
+        }
+        return new EmployeeResponse(
+                response.employeeId(), response.employeeNo(), response.departmentId(), response.departmentName(),
+                response.positionId(), response.positionName(), response.employmentTypeId(), response.employmentTypeName(),
+                response.managerId(), response.managerName(), response.name(), response.birthDate(), response.phone(),
+                response.email(), response.address(), response.hireDate(), response.resignationDate(),
+                response.employeeStatusCode(), null, null, null, null, response.profileImage(),
+                response.active(), response.createdAt(), response.updatedAt()
+        );
+    }
 }

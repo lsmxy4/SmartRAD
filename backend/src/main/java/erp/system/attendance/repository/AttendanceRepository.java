@@ -18,6 +18,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findAllByWorkDateOrderByEmployee_EmployeeIdAsc(LocalDate workDate);
 
+    List<Attendance> findAllByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(Long employeeId, LocalDate start, LocalDate end);
+
     @Query("""
             SELECT new erp.system.attendance.dto.AttendanceMonthlySummaryResponse(
                 a.employee.employeeId, a.employee.name,

@@ -70,6 +70,14 @@ public class PayrollService {
         return PayrollDetailedResponse.of(payroll, details);
     }
 
+    public PayrollDetailedResponse getMyDetail(Long payrollId, Long employeeId) {
+        PayrollDetailedResponse response = getDetail(payrollId);
+        if (!response.payroll().employeeId().equals(employeeId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+        return response;
+    }
+
     @Transactional
     public PayrollDetailedResponse calculate(PayrollCalculateRequest request) {
         Employee employee = employeeRepository.findById(request.employeeId())

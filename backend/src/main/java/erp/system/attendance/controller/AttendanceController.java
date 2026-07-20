@@ -37,6 +37,14 @@ public class AttendanceController {
         return attendanceService.getMonthlySummary(yearMonth);
     }
 
+    @GetMapping("/me")
+    public List<AttendanceResponse> getMyMonthly(
+            @AuthenticationPrincipal Long requesterId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
+    ) {
+        return attendanceService.getMyMonthly(requesterId, yearMonth);
+    }
+
     @PostMapping
     public ResponseEntity<AttendanceResponse> registerManual(@Valid @RequestBody AttendanceManualRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(attendanceService.registerManual(request));

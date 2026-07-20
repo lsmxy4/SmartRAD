@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
@@ -34,6 +35,19 @@ public class PayrollController {
     @GetMapping("/{id}")
     public PayrollDetailedResponse getDetail(@PathVariable Long id) {
         return payrollService.getDetail(id);
+    }
+
+    @GetMapping("/me")
+    public List<PayrollResponse> getMyList(
+            @AuthenticationPrincipal Long requesterId,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth payrollYearMonth
+    ) {
+        return payrollService.getList(requesterId, payrollYearMonth);
+    }
+
+    @GetMapping("/me/{id}")
+    public PayrollDetailedResponse getMyDetail(@AuthenticationPrincipal Long requesterId, @PathVariable Long id) {
+        return payrollService.getMyDetail(id, requesterId);
     }
 
     @PostMapping("/calculate")

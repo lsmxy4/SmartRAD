@@ -38,6 +38,14 @@ public class AttendanceService {
         return attendanceRepository.summarizeMonthly(start, end);
     }
 
+    public List<AttendanceResponse> getMyMonthly(Long employeeId, YearMonth yearMonth) {
+        LocalDate start = yearMonth.atDay(1);
+        LocalDate end = yearMonth.atEndOfMonth();
+        return attendanceRepository.findAllByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(employeeId, start, end).stream()
+                .map(AttendanceResponse::from)
+                .toList();
+    }
+
     @Transactional
     public AttendanceResponse checkIn(Long employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
