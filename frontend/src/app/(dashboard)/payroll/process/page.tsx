@@ -609,6 +609,7 @@ export default function PayrollProcessPage() {
       className: "border-slate-200 bg-white",
       iconClassName: "bg-slate-50 text-slate-500",
       valueClassName: "text-slate-900",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "지급 예정액",
@@ -618,6 +619,7 @@ export default function PayrollProcessPage() {
       className: "border-slate-200 bg-white",
       iconClassName: "bg-emerald-50 text-emerald-600",
       valueClassName: "text-slate-900",
+      valueSizeClassName: "text-lg",
     },
     {
       title: "지급 완료",
@@ -627,6 +629,7 @@ export default function PayrollProcessPage() {
       className: "border-teal-200 bg-teal-50",
       iconClassName: "bg-teal-100 text-teal-600",
       valueClassName: "text-teal-600",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "지급 대기",
@@ -636,6 +639,7 @@ export default function PayrollProcessPage() {
       className: "border-indigo-200 bg-indigo-50",
       iconClassName: "bg-indigo-100 text-indigo-600",
       valueClassName: "text-indigo-600",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "지급 보류",
@@ -645,6 +649,7 @@ export default function PayrollProcessPage() {
       className: "border-violet-200 bg-violet-50",
       iconClassName: "bg-violet-100 text-violet-600",
       valueClassName: "text-violet-600",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "지급 실패",
@@ -654,6 +659,7 @@ export default function PayrollProcessPage() {
       className: "border-orange-200 bg-orange-50",
       iconClassName: "bg-orange-100 text-orange-600",
       valueClassName: "text-orange-600",
+      valueSizeClassName: "text-3xl",
     },
   ];
 
@@ -734,7 +740,7 @@ export default function PayrollProcessPage() {
               </span>
             </div>
             <p
-              className={`mt-3 text-3xl font-extrabold ${card.valueClassName}`}
+              className={`mt-3 whitespace-nowrap font-extrabold ${card.valueSizeClassName} ${card.valueClassName}`}
             >
               {card.value}
             </p>

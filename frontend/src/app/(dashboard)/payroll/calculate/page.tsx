@@ -839,6 +839,7 @@ export default function PayrollCalculatePage() {
       className: "border-slate-200 bg-white",
       iconClassName: "bg-slate-50 text-slate-500",
       valueClassName: "text-slate-900",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "계산 완료",
@@ -848,6 +849,7 @@ export default function PayrollCalculatePage() {
       className: "border-indigo-200 bg-indigo-50",
       iconClassName: "bg-indigo-100 text-indigo-600",
       valueClassName: "text-indigo-600",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "검토 필요",
@@ -857,6 +859,7 @@ export default function PayrollCalculatePage() {
       className: "border-orange-200 bg-orange-50",
       iconClassName: "bg-orange-100 text-orange-600",
       valueClassName: "text-orange-600",
+      valueSizeClassName: "text-3xl",
     },
     {
       title: "총 지급액",
@@ -866,6 +869,7 @@ export default function PayrollCalculatePage() {
       className: "border-slate-200 bg-white",
       iconClassName: "bg-emerald-50 text-emerald-600",
       valueClassName: "text-slate-900",
+      valueSizeClassName: "text-xl",
     },
     {
       title: "예상 실지급액",
@@ -875,6 +879,7 @@ export default function PayrollCalculatePage() {
       className: "border-teal-200 bg-teal-50",
       iconClassName: "bg-teal-100 text-teal-600",
       valueClassName: "text-teal-600",
+      valueSizeClassName: "text-xl",
     },
   ];
   const totals = {
@@ -969,7 +974,7 @@ export default function PayrollCalculatePage() {
               </span>
             </div>
             <p
-              className={`mt-3 text-3xl font-extrabold ${card.valueClassName}`}
+              className={`mt-3 whitespace-nowrap font-extrabold ${card.valueSizeClassName} ${card.valueClassName}`}
             >
               {card.value}
             </p>

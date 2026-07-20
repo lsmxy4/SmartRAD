@@ -214,7 +214,7 @@ export default function DashboardPage() {
               <button type="button" onClick={() => setViewingNotice(null)} className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">닫기</button>
               <Link
                 href="/notices"
-                className="rounded-md bg-[#4A5DDF] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                className="inline-flex items-center justify-center rounded-md bg-[#4A5DDF] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 공지사항 관리로 이동
               </Link>
