@@ -398,6 +398,7 @@ export default function PayrollBasicPage() {
     try {
       const detailRes = await fetch(
         `${API_BASE_URL}/employees/${selectedEmployee.employeeId}`,
+        { headers: authHeaders() },
       );
       if (!detailRes.ok) throw new Error("직원 정보를 불러오지 못했습니다.");
       const detail = (await detailRes.json()) as EmployeeResponse & {

@@ -227,6 +227,7 @@ export default function PayrollProcessPage() {
           payrolls.map(async ({ employeeId }) => {
             const employeeRes = await fetch(
               `${API_BASE_URL}/employees/${employeeId}`,
+              { headers: authHeaders() },
             );
             if (!employeeRes.ok) return undefined;
             return (await employeeRes.json()) as EmployeeResponse;

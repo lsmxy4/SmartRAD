@@ -6,6 +6,11 @@ import { getEmployeeStatusLabel, getEmployeeStatusBadgeClasses } from "@/lib/emp
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
+function authHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 interface EmployeeDetailData {
   employeeId: number;
   employeeNo: string;
@@ -71,7 +76,7 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
   const fetchDetail = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/employees/${employeeId}`);
+      const res = await fetch(`${API_BASE_URL}/employees/${employeeId}`, { headers: authHeaders() });
       if (res.ok) {
         const json = await res.json();
         setData(json);
