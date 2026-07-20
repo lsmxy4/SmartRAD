@@ -2,6 +2,7 @@
 
 import {
   AdjustmentsHorizontalIcon,
+  ArrowTopRightOnSquareIcon,
   BanknotesIcon,
   CalendarDaysIcon,
   CheckCircleIcon,
@@ -12,7 +13,9 @@ import {
   PaperAirplaneIcon,
   UserGroupIcon,
   XCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL =
@@ -194,6 +197,87 @@ function csvCell(value: string | number) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
+function PaymentCriteriaModal({ onClose }: { onClose: () => void }) {
+  const criteria = [
+    {
+      title: "지급 계좌 정보",
+      description: "직원별 은행, 계좌번호, 예금주를 등록하거나 수정합니다.",
+      href: "/payroll/basic",
+      action: "계좌정보 수정",
+    },
+    {
+      title: "급여 계산 결과",
+      description: "지급 대상, 실지급액, 지급보류 여부를 확인하고 재계산합니다.",
+      href: "/payroll/calculate",
+      action: "급여계산 이동",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-criteria-title"
+        className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 id="payment-criteria-title" className="text-xl font-extrabold text-slate-900">
+              급여 지급 기준 수정
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              지급 전 계좌정보와 급여 계산 결과를 확인하고 필요한 기준을 수정하세요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="급여 지급 기준 수정 닫기"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-3 px-6 py-5">
+          {criteria.map((criterion) => (
+            <article
+              key={criterion.href}
+              className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <h3 className="font-bold text-slate-800">{criterion.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-500">{criterion.description}</p>
+              </div>
+              <Link
+                href={criterion.href}
+                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100"
+              >
+                {criterion.action}
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
+            </article>
+          ))}
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-xs font-medium leading-5 text-amber-700">
+            계좌정보가 등록되지 않은 직원은 지급 처리에서 제외됩니다. 지급완료된 급여는 지급 기준을 변경할 수 없습니다.
+          </p>
+        </div>
+
+        <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+          >
+            닫기
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function PayrollProcessPage() {
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,6 +295,7 @@ export default function PayrollProcessPage() {
     null,
   );
   const [refreshKey, setRefreshKey] = useState(0);
+  const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
 
   const refreshRows = () => setRefreshKey((key) => key + 1);
 
@@ -688,7 +773,7 @@ export default function PayrollProcessPage() {
       </div>
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-        <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+         <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             [
               "귀속연월",
@@ -713,11 +798,19 @@ export default function PayrollProcessPage() {
           <span className="rounded-full bg-amber-50 px-4 py-2 text-sm font-bold text-amber-600">
             ● 지급 대기
           </span>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={() => setCriteriaModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
             <AdjustmentsHorizontalIcon className="h-4 w-4" /> 기준 수정
           </button>
         </div>
       </section>
+
+      {criteriaModalOpen && (
+        <PaymentCriteriaModal onClose={() => setCriteriaModalOpen(false)} />
+      )}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {summaryCards.map(({ icon: Icon, ...card }) => (
