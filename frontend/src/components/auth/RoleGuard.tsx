@@ -11,6 +11,13 @@ const adminOnlyPaths = dashboardMenuGroups
   .map((item) => item.href);
 
 function isAdminOnlyPath(pathname: string) {
+  const allItems = dashboardMenuGroups.flatMap((group) => group.items);
+  const exactMatch = allItems.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  
+  if (exactMatch) {
+    return exactMatch.adminOnly;
+  }
+  
   return adminOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
