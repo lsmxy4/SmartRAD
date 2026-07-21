@@ -11,6 +11,15 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { useSummarize } from "@/lib/useSummarize";
+import { normalizeAttendanceStatus } from "@/components/attendance/types";
+import {
+  DepartmentHeadcountChart,
+  PayrollTrendChart,
+  TodayAttendanceChart,
+  type AttendanceStatusCount,
+  type DepartmentHeadcount,
+  type PayrollMonthlyPoint,
+} from "./DashboardCharts";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
@@ -32,6 +41,29 @@ interface Summary {
   todayAttendance: number;
   pendingLeaveRequests: number;
   totalNotices: number;
+}
+
+interface EmployeeSummary {
+  employeeId: number;
+  departmentName: string | null;
+  employeeStatusCode: string;
+}
+
+interface AttendanceRecord {
+  attendanceId: number;
+  attendanceStatusCode: string | null;
+}
+
+interface PayrollMonthlySummary {
+  payrollYearMonth: string;
+  totalPayAmount: number;
+  totalRealPayAmount: number;
+  employeeCount: number;
+}
+
+function formatMonthLabel(yearMonth: string) {
+  const match = yearMonth.match(/^(\d{4})(\d{2})$/);
+  return match ? `${Number(match[2])}월` : yearMonth;
 }
 
 function getAuthToken() {
@@ -58,6 +90,10 @@ export default function AdminDashboard() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartsLoading, setChartsLoading] = useState(true);
+  const [departmentData, setDepartmentData] = useState<DepartmentHeadcount[]>([]);
+  const [attendanceStatusData, setAttendanceStatusData] = useState<AttendanceStatusCount[]>([]);
+  const [payrollTrendData, setPayrollTrendData] = useState<PayrollMonthlyPoint[]>([]);
   const [viewingNotice, setViewingNotice] = useState<NoticeDetail | null>(null);
   const { summary: aiSummary, loading: summarizing, error: summarizeError, summarize, reset: resetSummary } = useSummarize();
 
@@ -84,16 +120,17 @@ export default function AdminDashboard() {
 
       try {
         const [employeesRes, attendanceRes, leaveRes, noticesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/employees?page=0&size=1`, { headers: authHeaders }),
+          fetch(`${API_BASE_URL}/employees?page=0&size=1000`, { headers: authHeaders }),
           fetch(`${API_BASE_URL}/attendances?date=${todayString()}`, { headers: authHeaders }),
           fetch(`${API_BASE_URL}/leave-requests?status=PENDING`, { headers: authHeaders }),
           fetch(`${API_BASE_URL}/notices?page=0&size=5`, { headers: authHeaders }),
         ]);
 
-        const employees = employeesRes.ok ? await employeesRes.json() : { totalElements: 0 };
-        const attendance = attendanceRes.ok ? await attendanceRes.json() : [];
+        const employees = employeesRes.ok ? await employeesRes.json() : { totalElements: 0, content: [] };
+        const attendance: AttendanceRecord[] = attendanceRes.ok ? await attendanceRes.json() : [];
         const leaveRequests = leaveRes.ok ? await leaveRes.json() : [];
         const noticePage = noticesRes.ok ? await noticesRes.json() : { content: [], totalElements: 0 };
+        const employeeList: EmployeeSummary[] = Array.isArray(employees.content) ? employees.content : [];
 
         setSummary({
           totalEmployees: employees.totalElements ?? 0,
@@ -102,6 +139,37 @@ export default function AdminDashboard() {
           totalNotices: noticePage.totalElements ?? 0,
         });
         setNotices(noticePage.content ?? []);
+
+        const activeEmployees = employeeList.filter((employee) => employee.employeeStatusCode === "ACTIVE");
+        const departmentCounts = new Map<string, number>();
+        activeEmployees.forEach((employee) => {
+          const name = employee.departmentName ?? "미지정";
+          departmentCounts.set(name, (departmentCounts.get(name) ?? 0) + 1);
+        });
+        setDepartmentData(
+          [...departmentCounts.entries()]
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+        );
+
+        const statusCounts = { 정상: 0, 지각: 0, 결근: 0, 기타: 0 };
+        attendance.forEach((record) => {
+          const status = normalizeAttendanceStatus(record.attendanceStatusCode);
+          if (status === "normal") statusCounts.정상 += 1;
+          else if (status === "late") statusCounts.지각 += 1;
+          else if (status === "absent") statusCounts.결근 += 1;
+          else statusCounts.기타 += 1;
+        });
+        const notCheckedIn = Math.max(0, activeEmployees.length - attendance.length);
+        setAttendanceStatusData(
+          [
+            { name: "정상", value: statusCounts.정상 },
+            { name: "지각", value: statusCounts.지각 },
+            { name: "결근", value: statusCounts.결근 },
+            { name: "기타", value: statusCounts.기타 },
+            { name: "미출근", value: notCheckedIn },
+          ].filter((item) => item.value > 0)
+        );
       } catch (error) {
         console.error("Failed to fetch dashboard summary", error);
       } finally {
@@ -109,7 +177,27 @@ export default function AdminDashboard() {
       }
     };
 
+    const fetchPayrollTrend = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/payrolls/monthly-summary?months=6`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const data: PayrollMonthlySummary[] = await res.json();
+        setPayrollTrendData(
+          data.map((item) => ({
+            month: formatMonthLabel(item.payrollYearMonth),
+            totalPayAmount: Number(item.totalPayAmount ?? 0),
+            totalRealPayAmount: Number(item.totalRealPayAmount ?? 0),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch payroll trend", error);
+      } finally {
+        setChartsLoading(false);
+      }
+    };
+
     fetchSummary();
+    fetchPayrollTrend();
   }, []);
 
   const stats = [
@@ -163,6 +251,12 @@ export default function AdminDashboard() {
             </div>
           );
         })}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mb-6 lg:grid-cols-2">
+        <DepartmentHeadcountChart data={departmentData} loading={loading} />
+        <TodayAttendanceChart data={attendanceStatusData} loading={loading} />
+        <PayrollTrendChart data={payrollTrendData} loading={chartsLoading} />
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

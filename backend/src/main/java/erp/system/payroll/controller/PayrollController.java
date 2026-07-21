@@ -4,6 +4,7 @@ import erp.system.payroll.dto.PayrollBulkPayRequest;
 import erp.system.payroll.dto.PayrollBulkResult;
 import erp.system.payroll.dto.PayrollCalculateRequest;
 import erp.system.payroll.dto.PayrollDetailedResponse;
+import erp.system.payroll.dto.PayrollMonthlySummaryResponse;
 import erp.system.payroll.dto.PayrollResponse;
 import erp.system.payroll.service.PayrollService;
 import jakarta.validation.Valid;
@@ -35,6 +36,13 @@ public class PayrollController {
     @GetMapping("/{id}")
     public PayrollDetailedResponse getDetail(@PathVariable Long id) {
         return payrollService.getDetail(id);
+    }
+
+    @GetMapping("/monthly-summary")
+    public List<PayrollMonthlySummaryResponse> getMonthlySummary(
+            @RequestParam(defaultValue = "6") int months
+    ) {
+        return payrollService.getMonthlySummary(months);
     }
 
     @GetMapping("/me")
