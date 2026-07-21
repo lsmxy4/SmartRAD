@@ -8,6 +8,7 @@ import {
   BellIcon,
   PlusIcon,
   ClockIcon,
+  ArrowPathIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline"
 
@@ -34,12 +35,18 @@ export default function DashboardHeader() {
   const current =
     flatItems.find((item) => item.href === pathname) ?? flatItems[0]
   const isDailyAttendance = pathname === "/attendance/daily"
-  const isMonthlyAttendance = pathname === "/attendance/monthly"
+  const isSelfAttendance = pathname === "/attendance/self"
+  const isMyAttendance = pathname === "/attendance/my"
+  const isMyLeave = pathname === "/leave/my"
   const isLeaveApproval = pathname === "/leave/approve"
   const isLeaveUsage = pathname === "/leave/status"
   const [monthlySelection, setMonthlySelection] = useState(currentMonth)
+  const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
+    const storedRole = window.localStorage.getItem("role") ?? window.sessionStorage.getItem("role")
+    setRole(storedRole)
+    
     const handleSync = (event: Event) => {
       const { month } = (event as CustomEvent<{ month: string }>).detail
       setMonthlySelection(month)
@@ -78,7 +85,19 @@ export default function DashboardHeader() {
         <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
           <BellIcon className="w-5 h-5" />
         </button>
-        {pathname === "/appointments" ? (
+
+        {isSelfAttendance ? (
+          <button
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("attendance:self-refresh"))
+            }
+            className="flex h-10 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 sm:px-4"
+          >
+            <ArrowPathIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">오늘 기록 새로고침</span>
+          </button>
+        ) : pathname === "/appointments" ? (
           <button
             type="button"
             onClick={() =>
@@ -101,6 +120,7 @@ export default function DashboardHeader() {
               <ArrowDownTrayIcon className="h-4 w-4" />
               내보내기
             </button>
+
             <button
               type="button"
               onClick={() =>
@@ -124,6 +144,7 @@ export default function DashboardHeader() {
               <ArrowDownTrayIcon className="h-4 w-4" />
               일괄 다운로드
             </button>
+
             <button
               type="button"
               onClick={() =>
@@ -158,6 +179,7 @@ export default function DashboardHeader() {
               <ArrowDownTrayIcon className="h-4 w-4" />
               내보내기
             </button>
+
             <button
               type="button"
               onClick={() =>
@@ -180,15 +202,17 @@ export default function DashboardHeader() {
             <ArrowDownTrayIcon className="h-4 w-4" />
             리포트 출력
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => router.push("/employees/new")}
-            className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
-          >
-            <UserPlusIcon className="w-4 h-4" />
-            직원 등록
-          </button>
+        ) : isMyAttendance || isMyLeave ? null : (
+          role === "ADMIN" && (
+            <button
+              type="button"
+              onClick={() => router.push("/employees/new")}
+              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+            >
+              <UserPlusIcon className="w-4 h-4" />
+              직원 등록
+            </button>
+          )
         )}
       </div>
     </header>

@@ -8,6 +8,7 @@ import erp.system.leave.dto.LeaveRequestBulkApproveResult;
 import erp.system.leave.dto.LeaveRequestCreateRequest;
 import erp.system.leave.dto.LeaveRequestResponse;
 import erp.system.leave.dto.LeaveRequestSummaryResponse;
+import erp.system.leave.dto.MyLeaveRequestCreateRequest;
 import erp.system.leave.entity.EmployeeLeaveBalance;
 import erp.system.leave.entity.LeaveRequest;
 import erp.system.leave.entity.LeaveType;
@@ -36,6 +37,17 @@ public class LeaveRequestService {
     private final EmployeeRepository employeeRepository;
     private final LeaveTypeRepository leaveTypeRepository;
     private final EmployeeLeaveBalanceRepository employeeLeaveBalanceRepository;
+
+    public List<LeaveRequestResponse> getMyRequests(Long employeeId) {
+        return leaveRequestRepository.findAllByEmployee_EmployeeIdOrderByCreatedAtDesc(employeeId).stream()
+                .map(LeaveRequestResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public LeaveRequestResponse createMyRequest(Long employeeId, MyLeaveRequestCreateRequest request) {
+        return createForEmployee(employeeId, request.leaveTypeId(), request.startDate(), request.endDate(), request.reason());
+    }
 
     public List<LeaveRequestResponse> getList(Long employeeId, String status) {
         return leaveRequestRepository.findAll((root, query, cb) -> {
@@ -72,26 +84,31 @@ public class LeaveRequestService {
 
     @Transactional
     public LeaveRequestResponse create(LeaveRequestCreateRequest request) {
-        Employee employee = employeeRepository.findById(request.employeeId())
+        return createForEmployee(request.employeeId(), request.leaveTypeId(), request.startDate(), request.endDate(), request.reason());
+    }
+
+    private LeaveRequestResponse createForEmployee(Long employeeId, Long leaveTypeId, LocalDate startDate,
+                                                    LocalDate endDate, String reason) {
+        Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
-        LeaveType leaveType = leaveTypeRepository.findById(request.leaveTypeId())
+        LeaveType leaveType = leaveTypeRepository.findById(leaveTypeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_TYPE_NOT_FOUND));
 
-        if (!leaveRequestRepository.findOverlapping(request.employeeId(), request.startDate(), request.endDate()).isEmpty()) {
+        if (!leaveRequestRepository.findOverlapping(employeeId, startDate, endDate).isEmpty()) {
             throw new BusinessException(ErrorCode.DUPLICATE_LEAVE_REQUEST_PERIOD);
         }
 
         BigDecimal leaveDays = BigDecimal.valueOf(
-                ChronoUnit.DAYS.between(request.startDate(), request.endDate()) + 1
+                ChronoUnit.DAYS.between(startDate, endDate) + 1
         );
 
         LeaveRequest leaveRequest = LeaveRequest.builder()
                 .employee(employee)
                 .leaveType(leaveType)
-                .startDate(request.startDate())
-                .endDate(request.endDate())
+                .startDate(startDate)
+                .endDate(endDate)
                 .leaveDays(leaveDays)
-                .reason(request.reason())
+                .reason(reason)
                 .build();
 
         return LeaveRequestResponse.from(leaveRequestRepository.save(leaveRequest));

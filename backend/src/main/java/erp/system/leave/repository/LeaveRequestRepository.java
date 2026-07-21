@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long>, JpaSpecificationExecutor<LeaveRequest> {
 
+    List<LeaveRequest> findAllByEmployee_EmployeeIdOrderByCreatedAtDesc(Long employeeId);
+
     @Query("""
             SELECT lr FROM LeaveRequest lr
             WHERE lr.employee.employeeId = :employeeId

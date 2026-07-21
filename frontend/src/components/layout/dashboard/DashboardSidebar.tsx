@@ -36,7 +36,7 @@ export default function DashboardSidebar() {
   const filteredGroups = menuGroups.map(group => ({
     ...group,
     items: group.items
-      .filter(item => admin || !item.adminOnly)
+      .filter(item => admin ? !("userOnly" in item && item.userOnly) : !item.adminOnly)
       .filter(item => item.name.includes(searchQuery))
   })).filter(group => group.items.length > 0);
 

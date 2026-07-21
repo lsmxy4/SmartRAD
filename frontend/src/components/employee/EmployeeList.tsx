@@ -31,9 +31,10 @@ interface EmployeeListProps {
   onSelectEmployee: (id: number) => void;
   selectedId: number | null;
   refreshKey?: number;
+  role?: string | null;
 }
 
-export default function EmployeeList({ onSelectEmployee, selectedId, refreshKey }: EmployeeListProps) {
+export default function EmployeeList({ onSelectEmployee, selectedId, refreshKey, role }: EmployeeListProps) {
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -224,14 +225,16 @@ export default function EmployeeList({ onSelectEmployee, selectedId, refreshKey 
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-gray-500 bg-gray-50 uppercase border-y border-gray-200">
             <tr>
-              <th className="px-6 py-3 w-10">
-                <input 
-                  type="checkbox" 
-                  checked={isAllChecked || false}
-                  onChange={handleSelectAll}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
-                />
-              </th>
+              {role === "ADMIN" && (
+                <th className="px-6 py-3 w-10">
+                  <input 
+                    type="checkbox" 
+                    checked={isAllChecked || false}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                  />
+                </th>
+              )}
               <th className="px-6 py-3 font-semibold">이름</th>
               <th className="px-6 py-3 font-semibold">부서</th>
               <th className="px-6 py-3 font-semibold">직급</th>
@@ -249,14 +252,16 @@ export default function EmployeeList({ onSelectEmployee, selectedId, refreshKey 
                   selectedId === emp.employeeId ? "bg-blue-50/50" : "hover:bg-gray-50"
                 }`}
               >
-                <td className="px-6 py-4" onClick={(e) => handleCheck(e, emp.employeeId)}>
-                  <input 
-                    type="checkbox" 
-                    checked={checkedIds.includes(emp.employeeId)} 
-                    onChange={() => {}} // dummy onChange to silence warning, handled by td click
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
-                  />
-                </td>
+                {role === "ADMIN" && (
+                  <td className="px-6 py-4" onClick={(e) => handleCheck(e, emp.employeeId)}>
+                    <input 
+                      type="checkbox" 
+                      checked={checkedIds.includes(emp.employeeId)} 
+                      onChange={() => {}} // dummy onChange to silence warning, handled by td click
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                    />
+                  </td>
+                )}
                 <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${selectedId === emp.employeeId ? 'bg-blue-600' : 'bg-gray-400'}`}>
                     {emp.name ? emp.name.charAt(0) : '?'}

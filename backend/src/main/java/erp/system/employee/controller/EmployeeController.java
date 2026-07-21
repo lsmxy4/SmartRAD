@@ -10,6 +10,8 @@ import erp.system.employee.dto.EmployeeResponse;
 import erp.system.employee.dto.EmployeeSummaryResponse;
 import erp.system.employee.dto.EmployeeUpdateRequest;
 import erp.system.employee.service.EmployeeService;
+import erp.system.common.exception.BusinessException;
+import erp.system.common.exception.ErrorCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -68,7 +70,13 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
-    public EmployeeResponse update(@PathVariable Long id, @Valid @RequestBody EmployeeUpdateRequest request) {
+    public EmployeeResponse update(@PathVariable Long id, @Valid @RequestBody EmployeeUpdateRequest request,
+                                    @AuthenticationPrincipal Long requesterId, Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !id.equals(requesterId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
         return employeeService.update(id, request);
     }
 

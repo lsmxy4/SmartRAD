@@ -6,6 +6,7 @@ import erp.system.leave.dto.LeaveRequestCreateRequest;
 import erp.system.leave.dto.LeaveRequestRejectRequest;
 import erp.system.leave.dto.LeaveRequestResponse;
 import erp.system.leave.dto.LeaveRequestSummaryResponse;
+import erp.system.leave.dto.MyLeaveRequestCreateRequest;
 import erp.system.leave.service.LeaveRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,19 @@ import java.util.List;
 public class LeaveRequestController {
 
     private final LeaveRequestService leaveRequestService;
+
+    @GetMapping("/me")
+    public List<LeaveRequestResponse> getMyRequests(@AuthenticationPrincipal Long employeeId) {
+        return leaveRequestService.getMyRequests(employeeId);
+    }
+
+    @PostMapping("/me")
+    public ResponseEntity<LeaveRequestResponse> createMyRequest(
+            @AuthenticationPrincipal Long employeeId,
+            @Valid @RequestBody MyLeaveRequestCreateRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(leaveRequestService.createMyRequest(employeeId, request));
+    }
 
     @GetMapping
     public List<LeaveRequestResponse> getList(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EmployeeStats from "@/components/employee/EmployeeStats";
 import EmployeeList from "@/components/employee/EmployeeList";
 import EmployeeDetail from "@/components/employee/EmployeeDetail";
@@ -17,6 +17,12 @@ export default function EmployeesPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [editEmployee, setEditEmployee] = useState<any | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Used to trigger re-fetch in List and Detail
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedRole = window.localStorage.getItem("role") ?? window.sessionStorage.getItem("role");
+    setRole(storedRole);
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (confirm("정말로 이 직원을 삭제하시겠습니까?")) {
@@ -40,23 +46,25 @@ export default function EmployeesPage() {
 
   return (
     <div className="max-w-[1600px] mx-auto h-[calc(100vh-100px)] flex flex-col">
-      <EmployeeStats refreshKey={refreshKey} />
+      {role === "ADMIN" && <EmployeeStats refreshKey={refreshKey} />}
       
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
         <EmployeeList
           refreshKey={refreshKey}
           onSelectEmployee={setSelectedEmployeeId}
           selectedId={selectedEmployeeId}
+          role={role}
         />
         <EmployeeDetail
           refreshKey={refreshKey}
           employeeId={selectedEmployeeId}
           onEditClick={setEditEmployee}
           onDeleteClick={handleDelete}
+          role={role}
         />
       </div>
 
-      {editEmployee && (
+      {editEmployee && role === "ADMIN" && (
         <EmployeeEditModal 
           employee={editEmployee} 
           onClose={() => setEditEmployee(null)} 

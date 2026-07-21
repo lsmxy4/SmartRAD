@@ -47,11 +47,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/departments/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/positions/**").permitAll()
 
-                        // 직원 관리 - 조회는 로그인만 하면 가능, 등록/수정/삭제/전사 조회는 관리자 전용
+                        // 직원 관리 - 조회는 로그인만 하면 가능, 수정은 본인 또는 관리자(컨트롤러에서 체크),
+                        // 등록/삭제/전사 조회는 관리자 전용
                         .requestMatchers(HttpMethod.GET, "/api/employees/payroll-summary").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/employees/*").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/employees").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/employees/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/employees/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/employees/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/employees/**").hasRole("ADMIN")
 

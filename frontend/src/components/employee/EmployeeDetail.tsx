@@ -58,7 +58,7 @@ function formatDays(days: number) {
   return Number.isInteger(days) ? `${days}일` : `${days.toFixed(1)}일`;
 }
 
-export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick, refreshKey }: { employeeId: number | null, onEditClick?: (data: EmployeeDetailData) => void, onDeleteClick?: (id: number) => void, refreshKey?: number }) {
+export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick, refreshKey, role }: { employeeId: number | null, onEditClick?: (data: EmployeeDetailData) => void, onDeleteClick?: (id: number) => void, refreshKey?: number, role?: string | null }) {
   const [data, setData] = useState<EmployeeDetailData | null>(null);
   const [annualLeaveDays, setAnnualLeaveDays] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -131,14 +131,18 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
           직원 상세
         </h2>
         <div className="flex items-center gap-2">
-          <button onClick={() => onEditClick?.(data)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="w-4 h-4" />
-            정보 수정
-          </button>
-          <button onClick={() => onDeleteClick?.(data.employeeId)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-rose-600 bg-rose-50 border border-rose-100 rounded-md hover:bg-rose-100 transition-colors">
-            <TrashIcon className="w-4 h-4" />
-            직원 삭제
-          </button>
+          {role === "ADMIN" && (
+            <>
+              <button onClick={() => onEditClick?.(data)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                <PencilSquareIcon className="w-4 h-4" />
+                정보 수정
+              </button>
+              <button onClick={() => onDeleteClick?.(data.employeeId)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-rose-600 bg-rose-50 border border-rose-100 rounded-md hover:bg-rose-100 transition-colors">
+                <TrashIcon className="w-4 h-4" />
+                직원 삭제
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -174,10 +178,12 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
                 <span className="text-gray-500 font-medium mr-2">근속 기간</span>
                 {formatTenure(data.hireDate)}
              </div>
-             <div className="text-sm font-bold text-emerald-600 bg-white px-3 py-1.5 rounded-md shadow-sm border border-emerald-50 mt-2">
-                <span className="text-emerald-500 font-medium mr-2">잔여 연차</span>
-                {annualLeaveDays !== null ? formatDays(annualLeaveDays) : "-"}
-             </div>
+             {role === "ADMIN" && (
+               <div className="text-sm font-bold text-emerald-600 bg-white px-3 py-1.5 rounded-md shadow-sm border border-emerald-50 mt-2">
+                  <span className="text-emerald-500 font-medium mr-2">잔여 연차</span>
+                  {annualLeaveDays !== null ? formatDays(annualLeaveDays) : "-"}
+               </div>
+             )}
           </div>
         </div>
 
@@ -233,23 +239,25 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
         </div>
 
         {/* Quick Links */}
-        <div>
-          <h4 className="text-xs font-bold text-gray-400 mb-3">관련 페이지로 이동</h4>
-          <div className="grid grid-cols-3 gap-3">
-            <button className="flex items-center justify-center gap-2 py-3 rounded-lg border border-blue-200 bg-blue-50/50 text-blue-700 font-bold hover:bg-blue-50 transition-colors text-sm">
-              <ClockIcon className="w-5 h-5" />
-              근태 현황 보기 &gt;
-            </button>
-            <button className="flex items-center justify-center gap-2 py-3 rounded-lg border border-emerald-200 bg-emerald-50/50 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors text-sm">
-              <CurrencyDollarIcon className="w-5 h-5" />
-              급여 정보 보기 &gt;
-            </button>
-            <button className="flex items-center justify-center gap-2 py-3 rounded-lg border border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-50 transition-colors text-sm">
-              <DocumentTextIcon className="w-5 h-5" />
-              증명서 발급 &gt;
-            </button>
+        {role === "ADMIN" && (
+          <div>
+            <h4 className="text-xs font-bold text-gray-400 mb-3">관련 페이지로 이동</h4>
+            <div className="grid grid-cols-3 gap-3">
+              <button className="flex items-center justify-center gap-2 py-3 rounded-lg border border-blue-200 bg-blue-50/50 text-blue-700 font-bold hover:bg-blue-50 transition-colors text-sm">
+                <ClockIcon className="w-5 h-5" />
+                근태 현황 보기 &gt;
+              </button>
+              <button className="flex items-center justify-center gap-2 py-3 rounded-lg border border-emerald-200 bg-emerald-50/50 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors text-sm">
+                <CurrencyDollarIcon className="w-5 h-5" />
+                급여 정보 보기 &gt;
+              </button>
+              <button className="flex items-center justify-center gap-2 py-3 rounded-lg border border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-50 transition-colors text-sm">
+                <DocumentTextIcon className="w-5 h-5" />
+                증명서 발급 &gt;
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>
