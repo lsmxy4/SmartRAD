@@ -31,15 +31,25 @@ docker compose up -d --build
 
 ## AI 비서 기능 (선택)
 
-우측 하단 채팅 위젯에서 본인의 연차/급여/근태를 자연어로 물어볼 수 있는 기능입니다. Anthropic API 키가 없으면 자동으로 "AI 비서 기능이 아직 설정되지 않았습니다" 안내만 뜨고 나머지 기능엔 영향이 없습니다.
+우측 하단 채팅 위젯에서 본인의 연차/급여/근태를 자연어로 물어보거나, 공지사항/휴가 사유를 AI로 요약할 수 있는 기능입니다. API 키가 없으면 자동으로 "AI 비서 기능이 아직 설정되지 않았습니다" 안내만 뜨고 나머지 기능엔 영향이 없습니다.
 
-사용하려면:
-1. [console.anthropic.com](https://console.anthropic.com)에서 가입 후 API Keys 메뉴에서 키 발급 (결제수단 등록 필요할 수 있음)
-2. 프로젝트 루트에 `.env` 파일 생성 (git에 안 올라감):
-   ```
-   ANTHROPIC_API_KEY=sk-ant-여기에-발급받은-키
-   ```
-3. `docker compose up -d --build backend`로 재기동
+Gemini(기본값)와 Anthropic 중 하나를 골라 쓸 수 있습니다. 프로젝트 루트에 `.env` 파일을 만들고(git에 안 올라감) 아래처럼 채우세요.
+
+**Gemini 사용 (기본값, 무료 티어 있음)**
+```
+GEMINI_API_KEY=여기에-발급받은-키
+ASSISTANT_PROVIDER=gemini
+```
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey)에서 "Create API key"로 발급받으세요(보통 `AIzaSy...`로 시작). 계정에 따라 무료 티어 할당량이 0으로 잡혀있을 수 있는데, 이 경우 [ai.google.dev/gemini-api/docs/rate-limits](https://ai.google.dev/gemini-api/docs/rate-limits)에서 계정 상태를 확인하세요.
+
+**Anthropic(Claude) 사용**
+```
+ANTHROPIC_API_KEY=sk-ant-여기에-발급받은-키
+ASSISTANT_PROVIDER=anthropic
+```
+[console.anthropic.com](https://console.anthropic.com)에서 가입 후 API Keys 메뉴에서 키 발급 (무료 크레딧이 없어 결제수단 등록이 필요할 수 있음).
+
+설정 후 `docker compose up -d --build backend`로 재기동하면 반영됩니다.
 
 ## 개발 시 참고
 
