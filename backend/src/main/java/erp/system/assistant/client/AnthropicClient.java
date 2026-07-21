@@ -2,17 +2,22 @@ package erp.system.assistant.client;
 
 import erp.system.common.exception.BusinessException;
 import erp.system.common.exception.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 
 @Component
 public class AnthropicClient {
+
+    private static final Logger log = LoggerFactory.getLogger(AnthropicClient.class);
 
     private final RestClient restClient = RestClient.create("https://api.anthropic.com");
     private final String apiKey;
@@ -56,7 +61,11 @@ public class AnthropicClient {
                 throw new BusinessException(ErrorCode.ASSISTANT_REQUEST_FAILED);
             }
             return response.content().get(0).text();
+        } catch (RestClientResponseException e) {
+            log.warn("Anthropic API request failed: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new BusinessException(ErrorCode.ASSISTANT_REQUEST_FAILED);
         } catch (RestClientException e) {
+            log.warn("Anthropic API request failed", e);
             throw new BusinessException(ErrorCode.ASSISTANT_REQUEST_FAILED);
         }
     }
