@@ -38,8 +38,12 @@ export default function DashboardHeader() {
   const isLeaveApproval = pathname === "/leave/approve"
   const isLeaveUsage = pathname === "/leave/status"
   const [monthlySelection, setMonthlySelection] = useState(currentMonth)
+  const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
+    const storedRole = window.localStorage.getItem("role") ?? window.sessionStorage.getItem("role")
+    setRole(storedRole)
+    
     const handleSync = (event: Event) => {
       const { month } = (event as CustomEvent<{ month: string }>).detail
       setMonthlySelection(month)
@@ -181,14 +185,16 @@ export default function DashboardHeader() {
             리포트 출력
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => router.push("/employees/new")}
-            className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
-          >
-            <UserPlusIcon className="w-4 h-4" />
-            직원 등록
-          </button>
+          role === "ADMIN" && (
+            <button
+              type="button"
+              onClick={() => router.push("/employees/new")}
+              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+            >
+              <UserPlusIcon className="w-4 h-4" />
+              직원 등록
+            </button>
+          )
         )}
       </div>
     </header>
