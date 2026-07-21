@@ -9,7 +9,9 @@ import erp.system.notice.dto.NoticeResponse;
 import erp.system.notice.dto.NoticeSummaryResponse;
 import erp.system.notice.dto.NoticeUpdateRequest;
 import erp.system.notice.entity.Notice;
+import erp.system.notice.entity.NoticeView;
 import erp.system.notice.repository.NoticeRepository;
+import erp.system.notice.repository.NoticeViewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +26,7 @@ public class NoticeService {
 
     private final NoticeRepository noticeRepository;
     private final EmployeeRepository employeeRepository;
+    private final NoticeViewRepository noticeViewRepository;
 
     public Page<NoticeSummaryResponse> getList(String keyword, Pageable pageable) {
         String normalizedKeyword = StringUtils.hasText(keyword) ? keyword : null;
@@ -31,9 +34,14 @@ public class NoticeService {
     }
 
     @Transactional
-    public NoticeResponse getById(Long noticeId) {
+    public NoticeResponse getById(Long noticeId, Long viewerId) {
         Notice notice = findActive(noticeId);
-        notice.increaseViewCount();
+        if (viewerId != null && !noticeViewRepository.existsByNotice_NoticeIdAndEmployee_EmployeeId(noticeId, viewerId)) {
+            Employee viewer = employeeRepository.findById(viewerId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+            noticeViewRepository.save(NoticeView.builder().notice(notice).employee(viewer).build());
+            notice.increaseViewCount();
+        }
         return NoticeResponse.from(notice);
     }
 

@@ -30,8 +30,8 @@ public class NoticeController {
     }
 
     @GetMapping("/{id}")
-    public NoticeResponse getById(@PathVariable Long id) {
-        return noticeService.getById(id);
+    public NoticeResponse getById(@PathVariable Long id, @AuthenticationPrincipal Long employeeId) {
+        return noticeService.getById(id, employeeId);
     }
 
     @PostMapping
