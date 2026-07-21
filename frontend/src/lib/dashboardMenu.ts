@@ -63,6 +63,7 @@ export const dashboardMenuGroups = [
   {
     title: "사내 소통",
     items: [
+      { name: "공지사항", href: "/notices/view", icon: MegaphoneIcon, adminOnly: false },
       { name: "공지사항 관리", href: "/notices", icon: MegaphoneIcon, adminOnly: true },
     ]
   }

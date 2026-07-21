@@ -10,7 +10,17 @@ const adminOnlyPaths = dashboardMenuGroups
   .filter((item) => item.adminOnly)
   .map((item) => item.href);
 
+const employeePaths = dashboardMenuGroups
+  .flatMap((group) => group.items)
+  .filter((item) => !item.adminOnly)
+  .map((item) => item.href);
+
 function isAdminOnlyPath(pathname: string) {
+  // `/notices/view` is an employee route nested below the administrator's
+  // `/notices` route, so public routes must win before prefix matching.
+  if (employeePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return false;
+  }
   return adminOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
