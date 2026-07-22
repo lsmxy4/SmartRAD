@@ -94,7 +94,6 @@ export function TodayAttendanceChart({ data, loading }: { data: AttendanceStatus
                     <Cell key={index} fill={total ? ATTENDANCE_COLORS[item.name] ?? DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length] : "#e5e7eb"} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value, name) => [`${Number(value)}명`, name]} contentStyle={TOOLTIP_CONTENT_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
