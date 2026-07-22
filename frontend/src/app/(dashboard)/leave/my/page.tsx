@@ -6,7 +6,7 @@ import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/commo
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
-type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
+type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 type StatusFilter = "ALL" | LeaveStatus;
 
 interface LeaveRequestResponse {
@@ -43,18 +43,25 @@ interface LeaveTypeResponse {
 
 interface ErrorResponse { message?: string; }
 
+interface LeavePreviewResponse {
+  leaveTypeName: string; startDate: string; endDate: string; requestedDays: number;
+  currentRemainDays: number; remainDaysAfterRequest: number; available: boolean; message: string | null;
+}
+
 const filters: { value: StatusFilter; label: string }[] = [
   { value: "ALL", label: "전체" },
   { value: "PENDING", label: "승인 대기" },
   { value: "APPROVED", label: "승인 완료" },
   { value: "REJECTED", label: "반려" },
+  { value: "CANCELLED", label: "신청 취소" },
 ];
 
-const statusLabel: Record<LeaveStatus, string> = { PENDING: "승인 대기", APPROVED: "승인 완료", REJECTED: "반려" };
+const statusLabel: Record<LeaveStatus, string> = { PENDING: "승인 대기", APPROVED: "승인 완료", REJECTED: "반려", CANCELLED: "신청 취소" };
 const statusStyle: Record<LeaveStatus, string> = {
   PENDING: "bg-amber-50 text-amber-700 ring-amber-200",
   APPROVED: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   REJECTED: "bg-rose-50 text-rose-700 ring-rose-200",
+  CANCELLED: "bg-gray-100 text-gray-600 ring-gray-200",
 };
 
 function authHeaders(json = false): HeadersInit {
@@ -90,6 +97,10 @@ export default function MyLeavePage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState({ leaveTypeId: "", startDate: "", endDate: "", reason: "" });
   const [formError, setFormError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<LeavePreviewResponse | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<LeaveRequestResponse | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true); setError(null);
@@ -135,6 +146,34 @@ export default function MyLeavePage() {
     window.addEventListener("leave:my-request", openForm);
     return () => window.removeEventListener("leave:my-request", openForm);
   }, [openForm]);
+
+  useEffect(() => {
+    if (!formOpen || !form.leaveTypeId || !form.startDate || !form.endDate) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setPreview(null); setPreviewing(true); setFormError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/leave-requests/me/preview`, { method: "POST", headers: authHeaders(true), signal: controller.signal,
+          body: JSON.stringify({ leaveTypeId: Number(form.leaveTypeId), startDate: form.startDate, endDate: form.endDate }) });
+        if (!response.ok) throw new Error(await readError(response, "휴가 일수를 계산하지 못했습니다."));
+        setPreview(await response.json() as LeavePreviewResponse);
+      } catch (reason) {
+        if (!(reason instanceof DOMException && reason.name === "AbortError")) setFormError(reason instanceof Error ? reason.message : "휴가 일수를 계산하지 못했습니다.");
+      } finally { if (!controller.signal.aborted) setPreviewing(false); }
+    }, 350);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [form.endDate, form.leaveTypeId, form.startDate, formOpen]);
+
+  const cancelRequest = async () => {
+    if (!cancelTarget || cancelling) return;
+    setCancelling(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/leave-requests/me/${cancelTarget.leaveRequestId}/cancel`, { method: "PATCH", headers: authHeaders() });
+      if (!response.ok) throw new Error(await readError(response, "휴가 신청을 취소하지 못했습니다."));
+      setCancelTarget(null); setDetail(null); setNotice("휴가 신청이 취소되었습니다."); await loadData();
+    } catch (reason) { setFormError(reason instanceof Error ? reason.message : "휴가 신청을 취소하지 못했습니다."); }
+    finally { setCancelling(false); }
+  };
 
   const submit = async () => {
     if (submitting) return;
@@ -184,9 +223,15 @@ export default function MyLeavePage() {
       maxWidth="lg"
       footer={<>
         <ModalCancelButton onClick={() => setFormOpen(false)} disabled={submitting} />
-        <ModalPrimaryButton onClick={() => void submit()} disabled={submitting}>{submitting ? "신청 중..." : "신청하기"}</ModalPrimaryButton>
+        <ModalPrimaryButton onClick={() => void submit()} disabled={submitting || previewing || !preview?.available}>{submitting ? "신청 중..." : "신청하기"}</ModalPrimaryButton>
       </>}
     >
+      {previewing && <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-500">휴가 일수를 계산하는 중입니다.</p>}
+      {preview && <div className={`rounded-lg border p-4 text-sm ${preview.available ? "border-indigo-200 bg-indigo-50 text-indigo-800" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
+        <p className="font-semibold">주말 제외 사용 일수 {days(preview.requestedDays)}</p>
+        <p className="mt-2">현재 잔여 {days(preview.currentRemainDays)} · 신청 후 잔여 {days(preview.remainDaysAfterRequest)}</p>
+        {preview.message && <p className="mt-2 font-medium">{preview.message}</p>}
+      </div>}
       <label className="block text-sm font-medium text-gray-700">휴가 유형<select value={form.leaveTypeId} onChange={(event) => setForm({ ...form, leaveTypeId: event.target.value })} className="mt-1 block h-10 w-full rounded-md border border-gray-200 px-3 outline-none focus:border-blue-500"><option value="">선택해주세요</option>{leaveTypes.map((item) => <option key={item.leaveTypeId} value={item.leaveTypeId}>{item.leaveTypeName}</option>)}</select></label><div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-medium text-gray-700">시작일<input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} className="mt-1 block h-10 w-full rounded-md border border-gray-200 px-3 outline-none focus:border-blue-500" /></label><label className="text-sm font-medium text-gray-700">종료일<input type="date" min={form.startDate || undefined} value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} className="mt-1 block h-10 w-full rounded-md border border-gray-200 px-3 outline-none focus:border-blue-500" /></label></div><label className="block text-sm font-medium text-gray-700">신청 사유<textarea maxLength={500} rows={4} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} placeholder="필요한 경우 신청 사유를 입력해주세요." className="mt-1 block w-full resize-none rounded-md border border-gray-200 p-3 outline-none focus:border-blue-500" /></label>{formError && <p role="alert" className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">{formError}</p>}
     </Modal>}
 
@@ -195,9 +240,10 @@ export default function MyLeavePage() {
       title="휴가 신청 상세"
       onClose={() => setDetail(null)}
       maxWidth="lg"
-      footer={<ModalCancelButton onClick={() => setDetail(null)}>닫기</ModalCancelButton>}
+      footer={<>{detail.status === "PENDING" && <ModalPrimaryButton tone="rose" onClick={() => setCancelTarget(detail)}>신청 취소</ModalPrimaryButton>}<ModalCancelButton onClick={() => setDetail(null)}>닫기</ModalCancelButton></>}
     >
       <div className="grid grid-cols-2 gap-4 text-sm">{[["휴가 유형", detail.leaveTypeName], ["신청 기간", period(detail)], ["사용 일수", days(detail.leaveDays)], ["신청일", formatDate(detail.createdAt)], ["처리일", formatDateTime(detail.processedAt)]].map(([label, value]) => <div key={label}><p className="text-xs font-medium text-gray-500">{label}</p><p className="mt-1 font-semibold text-gray-800">{value}</p></div>)}<div><p className="text-xs font-medium text-gray-500">승인 상태</p><p className="mt-1"><StatusBadge status={detail.status} /></p></div></div><div><p className="text-xs font-medium text-gray-500">신청 사유</p><p className="mt-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{detail.reason || "-"}</p></div>{detail.rejectionReason && <div><p className="text-xs font-medium text-gray-500">반려 사유</p><p className="mt-1 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{detail.rejectionReason}</p></div>}
     </Modal>}
+    {cancelTarget && <Modal icon={XCircleIcon} iconColor="rose" title="휴가 신청 취소" subtitle={`${cancelTarget.leaveTypeName} · ${period(cancelTarget)}`} onClose={() => !cancelling && setCancelTarget(null)} footer={<><ModalCancelButton onClick={() => setCancelTarget(null)} disabled={cancelling}>돌아가기</ModalCancelButton><ModalPrimaryButton tone="rose" onClick={() => void cancelRequest()} disabled={cancelling}>{cancelling ? "취소 중..." : "신청 취소"}</ModalPrimaryButton></>}><p className="text-sm text-gray-700">이 휴가 신청을 취소하시겠습니까? 취소 후에는 승인할 수 없습니다.</p></Modal>}
   </div>;
 }

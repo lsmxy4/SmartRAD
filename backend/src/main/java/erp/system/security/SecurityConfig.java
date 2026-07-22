@@ -93,6 +93,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/leave-policies/**").hasRole("ADMIN")
 
                         // 휴가 승인/반려/일괄승인 - 관리자 전용
+                        .requestMatchers(HttpMethod.PATCH, "/api/leave-requests/me/*/cancel").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/leave-requests/**").hasRole("ADMIN")
 
                         // 휴가 잔여일수 수동 등록 - 관리자 전용

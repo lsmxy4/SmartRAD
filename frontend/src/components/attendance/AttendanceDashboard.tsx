@@ -67,12 +67,12 @@ export default function AttendanceDashboard() {
 
   const activeEmployees = useMemo(() => employees.filter((employee) => employee.employeeStatusCode === "ACTIVE"), [employees]);
   const counts = useMemo(() => ({
-    totalEmployees: employees.length,
+    totalEmployees: activeEmployees.length,
     normal: rows.filter((row) => row.normalizedStatus === "normal").length,
     late: rows.filter((row) => row.normalizedStatus === "late").length,
     absent: rows.filter((row) => row.normalizedStatus === "absent").length,
     leave: rows.filter((row) => row.normalizedStatus === "leave").length,
-  }), [employees.length, rows]);
+  }), [activeEmployees.length, rows]);
   const handleFilteredRowsChange = useCallback((nextRows: AttendanceRow[]) => setFilteredRows(nextRows), []);
 
   const exportCsv = useCallback(() => {

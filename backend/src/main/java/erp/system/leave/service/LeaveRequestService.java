@@ -9,6 +9,8 @@ import erp.system.leave.dto.LeaveRequestCreateRequest;
 import erp.system.leave.dto.LeaveRequestResponse;
 import erp.system.leave.dto.LeaveRequestSummaryResponse;
 import erp.system.leave.dto.MyLeaveRequestCreateRequest;
+import erp.system.leave.dto.MyLeaveRequestPreviewRequest;
+import erp.system.leave.dto.LeaveRequestPreviewResponse;
 import erp.system.leave.entity.EmployeeLeaveBalance;
 import erp.system.leave.entity.LeaveRequest;
 import erp.system.leave.entity.LeaveType;
@@ -27,7 +29,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
+import java.time.DayOfWeek;
 import java.util.List;
 
 @Service
@@ -50,6 +52,27 @@ public class LeaveRequestService {
     @Transactional
     public LeaveRequestResponse createMyRequest(Long employeeId, MyLeaveRequestCreateRequest request) {
         return createForEmployee(employeeId, request.leaveTypeId(), request.startDate(), request.endDate(), request.reason());
+    }
+
+    public LeaveRequestPreviewResponse previewMyRequest(Long employeeId, MyLeaveRequestPreviewRequest request) {
+        findEmployee(employeeId);
+        LeaveType leaveType = findLeaveType(request.leaveTypeId());
+        BigDecimal requestedDays = calculateLeaveDays(request.startDate(), request.endDate());
+        EmployeeLeaveBalance balance = findBalance(employeeId, request.leaveTypeId());
+        String message = validateAvailability(employeeId, request.startDate(), request.endDate(), requestedDays, balance);
+        return new LeaveRequestPreviewResponse(leaveType.getLeaveTypeId(), leaveType.getLeaveTypeName(),
+                request.startDate(), request.endDate(), requestedDays, balance.getRemainDays(),
+                balance.getRemainDays().subtract(requestedDays), message == null, message);
+    }
+
+    @Transactional
+    public LeaveRequestResponse cancelMyRequest(Long employeeId, Long leaveRequestId) {
+        LeaveRequest request = findById(leaveRequestId);
+        if (!request.getEmployee().getEmployeeId().equals(employeeId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+        request.cancel();
+        return LeaveRequestResponse.from(request);
     }
 
     public List<LeaveRequestResponse> getList(Long employeeId, String status) {
@@ -92,18 +115,15 @@ public class LeaveRequestService {
 
     private LeaveRequestResponse createForEmployee(Long employeeId, Long leaveTypeId, LocalDate startDate,
                                                     LocalDate endDate, String reason) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
-        LeaveType leaveType = leaveTypeRepository.findById(leaveTypeId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_TYPE_NOT_FOUND));
-
-        if (!leaveRequestRepository.findOverlapping(employeeId, startDate, endDate).isEmpty()) {
-            throw new BusinessException(ErrorCode.DUPLICATE_LEAVE_REQUEST_PERIOD);
+        Employee employee = findEmployee(employeeId);
+        LeaveType leaveType = findLeaveType(leaveTypeId);
+        BigDecimal leaveDays = calculateLeaveDays(startDate, endDate);
+        EmployeeLeaveBalance balance = findBalance(employeeId, leaveTypeId);
+        String unavailable = validateAvailability(employeeId, startDate, endDate, leaveDays, balance);
+        if (unavailable != null) {
+            throw new BusinessException(unavailable.contains("중복")
+                    ? ErrorCode.DUPLICATE_LEAVE_REQUEST_PERIOD : ErrorCode.INSUFFICIENT_LEAVE_BALANCE);
         }
-
-        BigDecimal leaveDays = BigDecimal.valueOf(
-                ChronoUnit.DAYS.between(startDate, endDate) + 1
-        );
 
         LeaveRequest leaveRequest = LeaveRequest.builder()
                 .employee(employee)
@@ -217,6 +237,39 @@ public class LeaveRequestService {
 
     private Specification<LeaveRequest> statusEquals(String status) {
         return (root, query, cb) -> cb.equal(root.get("status"), status);
+    }
+
+    private Employee findEmployee(Long employeeId) {
+        return employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+    }
+
+    private LeaveType findLeaveType(Long leaveTypeId) {
+        return leaveTypeRepository.findById(leaveTypeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_TYPE_NOT_FOUND));
+    }
+
+    private EmployeeLeaveBalance findBalance(Long employeeId, Long leaveTypeId) {
+        return employeeLeaveBalanceRepository.findByEmployee_EmployeeIdAndLeaveType_LeaveTypeId(employeeId, leaveTypeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_BALANCE_NOT_FOUND));
+    }
+
+    private BigDecimal calculateLeaveDays(LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) throw new BusinessException(ErrorCode.INVALID_LEAVE_PERIOD);
+        long days = startDate.datesUntil(endDate.plusDays(1))
+                .filter(date -> date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY)
+                .count();
+        if (days == 0) throw new BusinessException(ErrorCode.INVALID_LEAVE_DAYS);
+        return BigDecimal.valueOf(days);
+    }
+
+    private String validateAvailability(Long employeeId, LocalDate startDate, LocalDate endDate,
+                                        BigDecimal requestedDays, EmployeeLeaveBalance balance) {
+        if (!leaveRequestRepository.findOverlapping(employeeId, startDate, endDate).isEmpty()) {
+            return "중복된 휴가 신청 기간입니다.";
+        }
+        if (balance.getRemainDays().compareTo(requestedDays) < 0) return "잔여 휴가 일수가 부족합니다.";
+        return null;
     }
 
     private LeaveRequest findById(Long leaveRequestId) {

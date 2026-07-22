@@ -3,6 +3,8 @@ package erp.system.common.exception;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    INVALID_LEAVE_PERIOD(HttpStatus.BAD_REQUEST, "시작일은 종료일보다 늦을 수 없습니다."),
+    INVALID_LEAVE_DAYS(HttpStatus.BAD_REQUEST, "휴일을 제외한 실제 신청 일수가 없습니다."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),

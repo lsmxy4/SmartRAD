@@ -7,6 +7,8 @@ import erp.system.leave.dto.LeaveRequestRejectRequest;
 import erp.system.leave.dto.LeaveRequestResponse;
 import erp.system.leave.dto.LeaveRequestSummaryResponse;
 import erp.system.leave.dto.MyLeaveRequestCreateRequest;
+import erp.system.leave.dto.MyLeaveRequestPreviewRequest;
+import erp.system.leave.dto.LeaveRequestPreviewResponse;
 import erp.system.leave.service.LeaveRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,17 @@ public class LeaveRequestController {
             @Valid @RequestBody MyLeaveRequestCreateRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(leaveRequestService.createMyRequest(employeeId, request));
+    }
+
+    @PostMapping("/me/preview")
+    public LeaveRequestPreviewResponse previewMyRequest(@AuthenticationPrincipal Long employeeId,
+            @Valid @RequestBody MyLeaveRequestPreviewRequest request) {
+        return leaveRequestService.previewMyRequest(employeeId, request);
+    }
+
+    @PatchMapping("/me/{id}/cancel")
+    public LeaveRequestResponse cancelMyRequest(@AuthenticationPrincipal Long employeeId, @PathVariable Long id) {
+        return leaveRequestService.cancelMyRequest(employeeId, id);
     }
 
     @GetMapping

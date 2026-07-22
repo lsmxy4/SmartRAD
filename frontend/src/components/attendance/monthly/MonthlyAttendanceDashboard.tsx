@@ -46,7 +46,8 @@ export default function MonthlyAttendanceDashboard() {
         await departmentsResponse.json() as Department[];
         const dailyData = await Promise.all(dailyResponses.map((response) => response.json() as Promise<AttendanceResponse[]>));
         const byDate = new Map(dates.map((date, index) => [date, Array.isArray(dailyData[index]) ? dailyData[index] : []]));
-        if (!cancelled) setData(aggregateMonthly(selectedMonth, employeePage.content ?? [], Array.isArray(summaries) ? summaries : [], byDate));
+        const activeEmployees = (employeePage.content ?? []).filter((employee) => employee.employeeStatusCode === "ACTIVE");
+        if (!cancelled) setData(aggregateMonthly(selectedMonth, activeEmployees, Array.isArray(summaries) ? summaries : [], byDate));
       } catch { if (!cancelled) { setData(null); setError("월간 근태 정보를 불러오지 못했습니다."); } }
       finally { if (!cancelled) setLoading(false); }
     }

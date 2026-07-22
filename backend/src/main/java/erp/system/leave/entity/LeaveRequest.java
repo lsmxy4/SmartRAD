@@ -23,6 +23,7 @@ public class LeaveRequest extends CreatedAtEntity {
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_APPROVED = "APPROVED";
     public static final String STATUS_REJECTED = "REJECTED";
+    public static final String STATUS_CANCELLED = "CANCELLED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -85,6 +86,12 @@ public class LeaveRequest extends CreatedAtEntity {
         this.status = STATUS_REJECTED;
         this.approver = approver;
         this.rejectionReason = rejectionReason;
+        this.processedAt = LocalDateTime.now();
+    }
+
+    public void cancel() {
+        validatePending();
+        this.status = STATUS_CANCELLED;
         this.processedAt = LocalDateTime.now();
     }
 

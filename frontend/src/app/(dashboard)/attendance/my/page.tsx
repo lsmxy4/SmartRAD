@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeftIcon, ArrowPathIcon, ArrowRightIcon, CalendarDaysIcon, CheckCircleIcon, ClockIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, CheckCircleIcon, ClockIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import AttendanceReasonModal from "@/components/attendance/AttendanceReasonModal";
 import Modal, { ModalCancelButton } from "@/components/common/Modal";
 
