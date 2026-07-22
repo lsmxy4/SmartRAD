@@ -1227,7 +1227,7 @@ export default function PayrollCalculatePage() {
           <span>
             총 {filteredRows.length}명 조회 · {selectedIds.size}명 선택
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 mr-20">
             {["‹", "1", "2", "3", "›"].map((page) => (
               <button
                 key={page}

@@ -288,7 +288,7 @@ export default function NoticeList({ refreshKey, onActionComplete, onEdit }: Pro
           <p className="text-sm text-gray-500">
             총 {totalElements}건 조회 · {checkedIds.length}건 선택
           </p>
-          <div className="flex gap-1">
+          <div className="flex gap-1 mr-20">
             <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="p-2 border border-gray-200 rounded-md text-gray-500 hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed"><ChevronLeftIcon className="w-4 h-4" /></button>
             <button className="px-3 py-1.5 border border-gray-200 rounded-md bg-blue-600 text-white text-sm">{page + 1}</button>
             <button disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)} className="p-2 border border-gray-200 rounded-md text-gray-500 hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed"><ChevronRightIcon className="w-4 h-4" /></button>

@@ -20,94 +20,16 @@ const WELCOME_MESSAGE: ChatMessage = {
   content: "안녕하세요! 연차, 급여, 근태 등 본인 정보에 대해 편하게 물어보세요.",
 };
 
-const CLOSED_BUTTON_SIZE = 56;
-const DEFAULT_EDGE_OFFSET = 24;
-const AVOIDANCE_GAP = 12;
-
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
-
-  // 챗봇 버튼은 항상 같은 자리에 고정해두고, 그 발밑(오른쪽 아래 고정 영역)에
-  // 실제로 깔리는 버튼/링크만 딱 겹치지 않을 만큼씩 왼쪽으로 밀어준다.
-  useEffect(() => {
-    // element -> 지금 적용 중인 왼쪽 이동량(px). 매 계산마다 원위치로 되돌린 뒤
-    // 다시 재보정해서, 겹침이 해소되면 자연스럽게 원래 자리로 복귀하게 한다.
-    const appliedShifts = new Map<HTMLElement, number>();
-
-    const restoreAll = () => {
-      appliedShifts.forEach((_, el) => {
-        el.style.transform = "";
-      });
-      appliedShifts.clear();
-    };
-
-    const sync = () => {
-      // 정확한 위치를 재보정하기 위해 먼저 기존에 밀어둔 것들을 원위치로 되돌린다.
-      appliedShifts.forEach((_, el) => {
-        el.style.transform = "";
-      });
-
-      if (open) {
-        appliedShifts.clear();
-        return;
-      }
-
-      const container = containerRef.current;
-      if (!container) return;
-
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const widgetLeft = viewportWidth - DEFAULT_EDGE_OFFSET - CLOSED_BUTTON_SIZE;
-      const widgetTop = viewportHeight - DEFAULT_EDGE_OFFSET - CLOSED_BUTTON_SIZE;
-
-      // 닫힌 버튼(56x56) 영역을 격자로 훑어서 그 자리에 실제로 깔리는 컨트롤을 찾는다.
-      const found = new Set<HTMLElement>();
-      const steps = 6;
-      for (let i = 0; i <= steps; i++) {
-        for (let j = 0; j <= steps; j++) {
-          const x = widgetLeft + (CLOSED_BUTTON_SIZE * i) / steps;
-          const y = widgetTop + (CLOSED_BUTTON_SIZE * j) / steps;
-          const stack = document.elementsFromPoint(x, y);
-          const topOutsideWidget = stack.find((el) => !container.contains(el));
-          const control = topOutsideWidget?.closest("button, a, [role='button'], input, select") as HTMLElement | null;
-          if (control) found.add(control);
-        }
-      }
-
-      const nextShifts = new Map<HTMLElement, number>();
-      found.forEach((el) => {
-        const rect = el.getBoundingClientRect(); // 위에서 원위치로 되돌렸으니 원래 위치 기준
-        const overlap = rect.right - widgetLeft + AVOIDANCE_GAP;
-        if (overlap > 0) {
-          el.style.transition = "transform 150ms ease";
-          el.style.transform = `translateX(-${overlap}px)`;
-          nextShifts.set(el, overlap);
-        }
-      });
-      appliedShifts.clear();
-      nextShifts.forEach((value, key) => appliedShifts.set(key, value));
-    };
-
-    sync();
-    window.addEventListener("scroll", sync, true);
-    window.addEventListener("resize", sync);
-    const interval = window.setInterval(sync, 400);
-    return () => {
-      window.removeEventListener("scroll", sync, true);
-      window.removeEventListener("resize", sync);
-      window.clearInterval(interval);
-      restoreAll();
-    };
-  }, [open]);
 
   const send = async () => {
     const message = input.trim();
@@ -140,7 +62,7 @@ export default function ChatWidget() {
   };
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 right-6 z-[90] flex flex-col items-end">
+    <div className="fixed bottom-6 right-6 z-[90] flex flex-col items-end">
       {open && (
         <div className="mb-3 flex h-[480px] w-80 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-200 bg-indigo-600 px-4 py-3 text-white">

@@ -139,7 +139,7 @@ export default function AttendanceTable({ rows, departments, date, loading, erro
 
       <div className="flex flex-col gap-3 border-t border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-gray-500">{filteredRows.length ? `${currentPage * PAGE_SIZE + 1}-${Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)} / 총 ${filteredRows.length}명` : "0 / 총 0명"}</span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 mr-20">
           <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} aria-label="이전 페이지" className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"><ChevronLeftIcon className="h-4 w-4" /></button>
           {Array.from({ length: totalPages }, (_, index) => index).map((index) => <button type="button" key={index} onClick={() => setPage(index)} className={`h-8 min-w-8 rounded-md px-2 text-sm font-medium ${currentPage === index ? 'bg-blue-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{index + 1}</button>)}
           <button type="button" disabled={currentPage >= totalPages - 1} onClick={() => setPage(currentPage + 1)} aria-label="다음 페이지" className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"><ChevronRightIcon className="h-4 w-4" /></button>

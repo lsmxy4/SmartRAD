@@ -194,7 +194,7 @@ export default function AppointmentList({ refreshKey, onActionComplete }: { refr
         <p className="text-sm text-gray-500">
           총 {totalElements}건 중 {rows.length ? page * PAGE_SIZE + 1 : 0}-{page * PAGE_SIZE + rows.length} 표시
         </p>
-        <div className="flex gap-1">
+        <div className="flex gap-1 mr-20">
           <button
             disabled={page === 0}
             onClick={() => setPage((p) => p - 1)}

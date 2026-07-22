@@ -288,8 +288,8 @@ export default function EmployeeList({ onSelectEmployee, selectedId, refreshKey,
         <span className="text-sm text-gray-500">
           {data ? `${data.number * data.size + 1}-${Math.min((data.number + 1) * data.size, data.totalElements)} / ${data.totalElements}명` : "0명"}
         </span>
-        <div className="flex items-center gap-1">
-          <button 
+        <div className="flex items-center gap-1 mr-20">
+          <button
             disabled={page === 0}
             onClick={() => setPage(p => p - 1)}
             className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50"

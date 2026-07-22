@@ -1137,7 +1137,7 @@ export default function PayrollBasicPage() {
             총 {filteredEmployees.length}명 조회 · {currentPage}/{totalPages}{" "}
             페이지 · {selectedIds.size}명 선택
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 mr-20">
             <button
               type="button"
               onClick={() => movePage(currentPage - 1)}
