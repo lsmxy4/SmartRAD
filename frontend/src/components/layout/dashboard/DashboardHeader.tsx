@@ -40,6 +40,8 @@ export default function DashboardHeader() {
   const isMyLeave = pathname === "/leave/my"
   const isLeaveApproval = pathname === "/leave/approve"
   const isLeaveUsage = pathname === "/leave/status"
+  const isMyEventSupport = pathname === "/events/my"
+  const isEventSupportAdmin = pathname === "/events"
   const [monthlySelection, setMonthlySelection] = useState(currentMonth)
   const [role, setRole] = useState<string | null>(null)
 
@@ -200,7 +202,18 @@ export default function DashboardHeader() {
             <ArrowDownTrayIcon className="h-4 w-4" />
             리포트 출력
           </button>
-        ) : isMyAttendance || isMyLeave ? null : (
+        ) : isEventSupportAdmin ? (
+          <button
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("event-support:export"))
+            }
+            className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            내보내기
+          </button>
+        ) : isMyAttendance || isMyLeave || isMyEventSupport ? null : (
           role === "ADMIN" && (
             <button
               type="button"

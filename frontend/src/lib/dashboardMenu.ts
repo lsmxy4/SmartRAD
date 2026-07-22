@@ -18,6 +18,7 @@ import {
   AdjustmentsHorizontalIcon,
   TagIcon,
   ReceiptPercentIcon,
+  GiftIcon,
 } from "@heroicons/react/24/outline";
 
 export const dashboardMenuGroups = [
@@ -59,6 +60,8 @@ export const dashboardMenuGroups = [
       { name: "급여 계산", href: "/payroll/calculate", icon: CalculatorIcon, adminOnly: true },
       { name: "급여 지급 처리", href: "/payroll/process", icon: BanknotesIcon, adminOnly: true },
       { name: "급여항목 관리", href: "/payroll/items", icon: TagIcon, adminOnly: true },
+      { name: "경조비 신청", href: "/events/my", icon: GiftIcon, adminOnly: false, userOnly: true },
+      { name: "경조비 관리", href: "/events", icon: GiftIcon, adminOnly: true },
     ]
   },
   {

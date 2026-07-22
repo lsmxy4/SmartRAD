@@ -77,6 +77,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/certificate-issues").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/certificate-issues").hasRole("ADMIN")
 
+                        // 경조비 신청 - 본인 신청/내역 조회는 로그인만 하면 가능, 승인/반려/지급 처리 및 전체 조회는 관리자 전용
+                        .requestMatchers(HttpMethod.GET, "/api/event-supports/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/event-supports/me").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/event-supports/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/event-supports/search").hasRole("ADMIN")
+
                         // 휴가정책 관리 - 등록/삭제는 관리자 전용
                         .requestMatchers(HttpMethod.POST, "/api/leave-policies").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/leave-policies/**").hasRole("ADMIN")
