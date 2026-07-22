@@ -20,16 +20,71 @@ const WELCOME_MESSAGE: ChatMessage = {
   content: "안녕하세요! 연차, 급여, 근태 등 본인 정보에 대해 편하게 물어보세요.",
 };
 
+const CLOSED_BUTTON_SIZE = 56;
+const DEFAULT_EDGE_OFFSET = 24;
+const AVOIDANCE_GAP = 12;
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rightOffset, setRightOffset] = useState(DEFAULT_EDGE_OFFSET);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
+
+  // 닫힌 상태의 동그란 버튼이 페이지 하단 콘텐츠(페이지네이션 등)와 겹치면,
+  // 페이지 레이아웃은 건드리지 않고 버튼만 딱 겹치지 않을 만큼 왼쪽으로 비켜준다.
+  useEffect(() => {
+    if (open) {
+      setRightOffset(DEFAULT_EDGE_OFFSET);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const computeOffset = () => {
+      const viewportWidth = window.innerWidth;
+      const centerY = window.innerHeight - DEFAULT_EDGE_OFFSET - CLOSED_BUTTON_SIZE / 2;
+      // 페이지네이션처럼 버튼이 여러 개 붙어 있는 경우 위젯의 원래 자리만 훑으면
+      // 옆 버튼과 다시 겹칠 수 있으므로, 오른쪽 끝에서부터 넓게(최대 400px) 훑어서
+      // 겹치는 컨트롤 중 가장 왼쪽 것 기준으로 한 번에 피한다. 버튼 사이 좁은 틈에서
+      // 섣불리 멈추지 않도록 범위 전체를 끝까지 훑는다.
+      const scanWidth = 400;
+      const step = 12;
+
+      let requiredOffset = DEFAULT_EDGE_OFFSET;
+      for (let x = viewportWidth - DEFAULT_EDGE_OFFSET; x >= viewportWidth - DEFAULT_EDGE_OFFSET - scanWidth; x -= step) {
+        const stack = document.elementsFromPoint(x, centerY);
+        // 배경 div 등은 무시하고, 실제로 누를 수 있는 컨트롤(버튼/링크 등)과 겹칠 때만 회피한다.
+        const hit = stack.find((el) => {
+          if (container.contains(el)) return false;
+          return el.closest("button, a, [role='button'], input, select") !== null;
+        });
+        if (hit) {
+          const control = hit.closest("button, a, [role='button'], input, select") as HTMLElement;
+          const rect = control.getBoundingClientRect();
+          requiredOffset = Math.max(requiredOffset, viewportWidth - rect.left + AVOIDANCE_GAP);
+        }
+      }
+      setRightOffset(requiredOffset);
+    };
+
+    computeOffset();
+    window.addEventListener("scroll", computeOffset, true);
+    window.addEventListener("resize", computeOffset);
+    const interval = window.setInterval(computeOffset, 400);
+    return () => {
+      window.removeEventListener("scroll", computeOffset, true);
+      window.removeEventListener("resize", computeOffset);
+      window.clearInterval(interval);
+    };
+  }, [open]);
 
   const send = async () => {
     const message = input.trim();
@@ -62,7 +117,11 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[90] flex flex-col items-end">
+    <div
+      ref={containerRef}
+      className="fixed bottom-6 z-[90] flex flex-col items-end transition-[right] duration-200"
+      style={{ right: rightOffset }}
+    >
       {open && (
         <div className="mb-3 flex h-[480px] w-80 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-200 bg-indigo-600 px-4 py-3 text-white">
