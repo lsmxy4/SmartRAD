@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeftIcon, ArrowPathIcon, ArrowRightIcon, CalendarDaysIcon, CheckCircleIcon, ClockIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, CheckCircleIcon, ClockIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
@@ -107,6 +107,12 @@ export default function MyAttendancePage() {
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [fetchRecords]);
 
+  useEffect(() => {
+    const handleRefresh = () => void fetchRecords();
+    window.addEventListener("attendance:my-refresh", handleRefresh);
+    return () => window.removeEventListener("attendance:my-refresh", handleRefresh);
+  }, [fetchRecords]);
+
   const summary = useMemo(() => {
     const total = records.reduce((sum, item) => sum + (item.workMinutes ?? 0), 0);
     const count = (status: Filter) => records.filter((item) => item.attendanceStatusCode === status).length;
@@ -128,7 +134,6 @@ export default function MyAttendancePage() {
         <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} className="h-10 rounded-md border border-gray-200 px-3 text-sm font-medium text-gray-700 outline-none focus:border-blue-500" />
         <button type="button" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="다음 달" className="flex h-10 w-10 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"><ArrowRightIcon className="h-4 w-4" /></button>
         <button type="button" onClick={() => setMonth(currentMonth())} className="h-10 rounded-md border border-gray-200 px-3 text-sm font-medium text-gray-600 hover:bg-gray-50">이번 달</button>
-        <button type="button" onClick={() => void fetchRecords()} disabled={loading} className="flex h-10 items-center gap-2 rounded-md bg-[#4A5DDF] px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"><ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />새로고침</button>
       </div>
     </section>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDaysIcon, CheckCircleIcon, ClockIcon, PaperAirplaneIcon, PlusIcon, XCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CalendarDaysIcon, CheckCircleIcon, ClockIcon, PaperAirplaneIcon, XCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
@@ -125,10 +125,15 @@ export default function MyLeavePage() {
 
   const filtered = useMemo(() => requests.filter((item) => filter === "ALL" || item.status === filter), [filter, requests]);
 
-  const openForm = () => {
+  const openForm = useCallback(() => {
     setForm({ leaveTypeId: leaveTypes[0] ? String(leaveTypes[0].leaveTypeId) : "", startDate: "", endDate: "", reason: "" });
     setFormError(null); setNotice(null); setFormOpen(true);
-  };
+  }, [leaveTypes]);
+
+  useEffect(() => {
+    window.addEventListener("leave:my-request", openForm);
+    return () => window.removeEventListener("leave:my-request", openForm);
+  }, [openForm]);
 
   const submit = async () => {
     if (submitting) return;
@@ -155,7 +160,6 @@ export default function MyLeavePage() {
   ];
 
   return <div className="mx-auto max-w-[1600px] space-y-5">
-    <div className="flex justify-end"><button type="button" onClick={openForm} className="flex w-full items-center justify-center gap-2 rounded-md bg-[#4A5DDF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto"><PlusIcon className="h-4 w-4" />휴가 신청</button></div>
     {notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{notice}</p>}
 
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{summaryCards.map((card) => { const Icon = card.icon; return <div key={card.label} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${card.style}`}><Icon className="h-5 w-5" /></span><div><p className="text-sm font-medium text-gray-500">{card.label}</p><p className="mt-1 text-2xl font-bold text-gray-900">{loading ? "-" : days(card.value)}</p></div></div>; })}</section>
