@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ClockIcon,
   CalendarDaysIcon,
   MegaphoneIcon,
   XMarkIcon,
+  SparklesIcon,
+  ArrowRightOnRectangleIcon,
+  ArrowLeftOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
@@ -90,6 +93,7 @@ export default function EmployeeDashboard() {
   const [summary, setSummary] = useState<EmployeeSummary | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const [viewingNotice, setViewingNotice] = useState<NoticeDetail | null>(null);
 
   const openNotice = async (noticeId: number) => {
@@ -102,51 +106,121 @@ export default function EmployeeDashboard() {
     }
   };
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      const headers = authHeaders();
-      const employeeId = getEmployeeId();
-      
-      try {
-        const [attendanceRes, leaveRes, noticesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/attendances/me?yearMonth=${currentYearMonthString()}`, { headers }),
-          employeeId ? fetch(`${API_BASE_URL}/leave-balances?employeeId=${employeeId}`, { headers }) : Promise.resolve(null),
-          fetch(`${API_BASE_URL}/notices?page=0&size=5`, { headers }),
-        ]);
+  const closeNotice = () => {
+    setViewingNotice(null);
+  };
 
-        const attendances: Attendance[] = attendanceRes.ok ? await attendanceRes.json() : [];
-        const todayAtt = attendances.find(a => a.date === todayString()) || null;
+  const fetchSummary = useCallback(async () => {
+    const headers = authHeaders();
+    const employeeId = getEmployeeId();
+    
+    try {
+      const [attendanceRes, leaveRes, noticesRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/attendances/me?yearMonth=${currentYearMonthString()}`, { headers }),
+        employeeId ? fetch(`${API_BASE_URL}/leave-balances?employeeId=${employeeId}`, { headers }) : Promise.resolve(null),
+        fetch(`${API_BASE_URL}/notices?page=0&size=5`, { headers }),
+      ]);
 
-        const leaveBalances: LeaveBalance[] = (leaveRes && leaveRes.ok) ? await leaveRes.json() : [];
-        const totalRemainLeave = leaveBalances.reduce((acc, curr) => acc + curr.remainDays, 0);
+      const attendances: Attendance[] = attendanceRes.ok ? await attendanceRes.json() : [];
+      const todayAtt = attendances.find(a => a.date === todayString()) || null;
 
-        const noticePage = noticesRes.ok ? await noticesRes.json() : { content: [] };
+      const leaveBalances: LeaveBalance[] = (leaveRes && leaveRes.ok) ? await leaveRes.json() : [];
+      const totalRemainLeave = leaveBalances.reduce((acc, curr) => acc + curr.remainDays, 0);
 
-        setSummary({
-          todayAttendance: todayAtt,
-          totalRemainLeave: totalRemainLeave,
-        });
-        setNotices(noticePage.content ?? []);
-      } catch (error) {
-        console.error("Failed to fetch employee dashboard summary", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const noticePage = noticesRes.ok ? await noticesRes.json() : { content: [] };
 
-    fetchSummary();
+      setSummary({
+        todayAttendance: todayAtt,
+        totalRemainLeave: totalRemainLeave,
+      });
+      setNotices(noticePage.content ?? []);
+    } catch (error) {
+      console.error("Failed to fetch employee dashboard summary", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  const handleCheckIn = async () => {
+    if (processing) return;
+    setProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/attendances/check-in`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "출근 체크에 실패했습니다.");
+      }
+      await fetchSummary();
+      window.dispatchEvent(new Event("attendance:self-refresh"));
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "출근 체크에 실패했습니다.");
+      await fetchSummary();
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (processing) return;
+    setProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/attendances/check-out`, {
+        method: "PATCH",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "퇴근 체크에 실패했습니다.");
+      }
+      await fetchSummary();
+      window.dispatchEvent(new Event("attendance:self-refresh"));
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "퇴근 체크에 실패했습니다.");
+      await fetchSummary();
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 출퇴근 현황 위젯 */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ClockIcon className="w-6 h-6" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                <ClockIcon className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">오늘 출퇴근 현황</h2>
             </div>
-            <h2 className="text-lg font-bold text-gray-900">오늘 출퇴근 현황</h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={processing || summary?.todayAttendance?.checkInTime != null}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-[#5569e5] text-white hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                출근
+              </button>
+              <button
+                type="button"
+                onClick={handleCheckOut}
+                disabled={processing || !summary?.todayAttendance?.checkInTime || summary?.todayAttendance?.checkOutTime != null}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-[#a6aab2] text-white hover:bg-gray-500 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeftOnRectangleIcon className="w-4 h-4" />
+                퇴근
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-lg p-4 text-center">
