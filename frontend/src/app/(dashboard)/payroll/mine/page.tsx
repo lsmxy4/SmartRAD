@@ -153,7 +153,7 @@ export default function MyPayrollPage() {
 
   return (
     <>
-    <div className="print:hidden payroll-statement-print mx-auto max-w-[1600px] space-y-4 text-slate-800">
+    <div className="print:hidden payroll-statement-print payroll-statement-page mx-auto max-w-[1600px] space-y-4 text-slate-800">
       <section>
         <h2 className="text-2xl font-bold text-slate-900">내 급여 명세서</h2>
         <p className="mt-1 text-base text-slate-500">매월 지급된 본인의 급여 명세서를 조회하고 인쇄할 수 있습니다.</p>
@@ -192,8 +192,8 @@ export default function MyPayrollPage() {
           maxWidth="2xl"
           footer={
             detail && (
-              <div className="flex w-full justify-between gap-3">
-                <div className="flex gap-2">
+              <div className="payroll-detail-footer flex w-full justify-between gap-3">
+                <div className="payroll-detail-actions flex gap-2">
                   <button type="button" onClick={() => window.print()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                     <PrinterIcon className="h-4 w-4" /> 명세서 인쇄
                   </button>

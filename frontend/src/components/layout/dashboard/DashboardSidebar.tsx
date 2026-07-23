@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
+import { ArrowRightStartOnRectangleIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { dashboardMenuGroups as menuGroups } from "@/lib/dashboardMenu";
 import { clearAuthStorage, isAdmin } from "@/lib/auth";
 import Logo from "@/components/ui/Logo";
@@ -19,6 +19,7 @@ export default function DashboardSidebar() {
   const [employeeName, setEmployeeName] = useState("");
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [admin, setAdmin] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -34,6 +35,8 @@ export default function DashboardSidebar() {
     router.push("/login");
   };
 
+  const closeMobileSidebar = () => setMobileOpen(false);
+
   const filteredGroups = menuGroups.map(group => ({
     ...group,
     items: group.items
@@ -43,7 +46,19 @@ export default function DashboardSidebar() {
 
   return (
     <>
-      <aside className="w-64 bg-[#0B1120] text-gray-300 min-h-screen flex flex-col hidden md:flex fixed h-full">
+      <button
+        type="button"
+        aria-label={mobileOpen ? "메뉴 닫기" : "메뉴 열기"}
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen((open) => !open)}
+        className="dashboard-menu-toggle"
+      >
+        {mobileOpen ? <XMarkIcon className="h-5 w-5" /> : <Bars3Icon className="h-5 w-5" />}
+      </button>
+
+      {mobileOpen && <button type="button" aria-label="메뉴 닫기" className="dashboard-sidebar-backdrop" onClick={closeMobileSidebar} />}
+
+      <aside className={`dashboard-sidebar w-64 bg-[#0B1120] text-gray-300 min-h-screen flex flex-col fixed h-full ${mobileOpen ? "dashboard-sidebar-open" : ""}`}>
       <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800 shrink-0">
         <span className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500">
@@ -91,6 +106,7 @@ export default function DashboardSidebar() {
                     <Link
                       key={itemIdx}
                       href={item.href}
+                      onClick={closeMobileSidebar}
                       className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                         isActive
                           ? "bg-[#1A2234] text-white border-l-2 border-blue-500"

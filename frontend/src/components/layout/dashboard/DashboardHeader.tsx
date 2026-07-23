@@ -68,7 +68,7 @@ export default function DashboardHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex min-h-16 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    <header className="dashboard-header sticky top-0 z-20 flex min-h-16 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
       <div>
         <h1 className="text-xl font-bold text-gray-900">{current.name}</h1>
         <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">

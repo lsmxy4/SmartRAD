@@ -48,6 +48,132 @@ body {
   background: #ffffff;
 }
 
+/* Desktop is the base dashboard layout. Tablet and phone adjustments are below. */
+.dashboard-sidebar {
+  z-index: 40;
+  transform: translateX(0);
+}
+
+.dashboard-content {
+  margin-left: 16rem;
+}
+
+.dashboard-main {
+  padding: 1.5rem;
+}
+
+.dashboard-menu-toggle,
+.dashboard-sidebar-backdrop {
+  display: none;
+}
+
+.dashboard-notices-page {
+  height: calc(100vh - 100px);
+}
+
+/* Tablet: hide the permanent sidebar and open it with the menu button. */
+@media (max-width: 1023px) {
+  .dashboard-sidebar {
+    transition: transform 200ms ease-out;
+    transform: translateX(-100%);
+  }
+
+  .dashboard-sidebar.dashboard-sidebar-open {
+    transform: translateX(0);
+    box-shadow: 12px 0 30px rgb(15 23 42 / 25%);
+  }
+
+  .dashboard-sidebar-backdrop {
+    background: rgb(15 23 42 / 45%);
+    border: 0;
+    display: block;
+    inset: 0;
+    position: fixed;
+    z-index: 30;
+  }
+
+  .dashboard-menu-toggle {
+    align-items: center;
+    background: #0b1120;
+    border: 0;
+    border-radius: 0.5rem;
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    height: 2.5rem;
+    justify-content: center;
+    left: 1rem;
+    position: fixed;
+    top: 0.75rem;
+    width: 2.5rem;
+    z-index: 50;
+  }
+
+  .dashboard-content {
+    margin-left: 0;
+  }
+
+  .dashboard-main {
+    padding: 1.25rem;
+  }
+
+  .dashboard-header {
+    padding-left: 4.5rem;
+  }
+
+  .dashboard-notices-page {
+    height: calc(100vh - 116px);
+  }
+}
+
+/* Phone: use a compact single-column layout and preserve table access by scrolling. */
+@media (max-width: 639px) {
+  .dashboard-main {
+    padding: 0.75rem;
+  }
+
+  .dashboard-header {
+    padding-left: 4rem;
+  }
+
+  .dashboard-notices-page {
+    height: auto;
+    min-height: calc(100vh - 132px);
+  }
+
+  .notice-filter,
+  .notice-filter-actions,
+  .notice-bulk-actions,
+  .notice-pagination,
+  .payroll-detail-footer,
+  .payroll-detail-actions {
+    width: 100%;
+  }
+
+  .notice-filter-actions > button,
+  .notice-bulk-actions > button,
+  .payroll-detail-actions > button,
+  .payroll-detail-footer > button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .notice-list-header,
+  .notice-pagination,
+  .payroll-detail-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notice-table-scroll {
+    overflow-x: auto;
+  }
+
+  .payroll-statement-page h2 {
+    font-size: 1.25rem;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

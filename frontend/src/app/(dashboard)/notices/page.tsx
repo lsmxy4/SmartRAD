@@ -33,7 +33,7 @@ export default function NoticesPage() {
   }, []);
 
   return (
-    <div className="max-w-[1600px] mx-auto h-[calc(100vh-100px)] flex flex-col p-6">
+    <div className="dashboard-notices-page max-w-[1600px] mx-auto flex flex-col">
       <NoticeStats refreshKey={refreshKey} />
       <NoticeList refreshKey={refreshKey} onActionComplete={handleActionComplete} onEdit={handleEdit} />
       {showModal && (
