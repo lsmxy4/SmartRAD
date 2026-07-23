@@ -1,0 +1,65 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: tp-hr-mysql
+    restart: unless-stopped
+    command: --innodb-buffer-pool-size=128M --performance-schema=OFF
+    mem_limit: 400m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: tp_hr
+      MYSQL_USER: ${DB_USERNAME:-tp_hr_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-tp_hr_password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - tp-hr-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: smartrad-backend:latest
+    container_name: tp-hr-backend
+    restart: unless-stopped
+    mem_limit: 420m
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx256m -Xss256k
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: ${DB_USERNAME:-tp_hr_user}
+      DB_PASSWORD: ${DB_PASSWORD:-tp_hr_password}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-please-override-this-secret-key-in-production-0123456789}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ASSISTANT_PROVIDER: ${ASSISTANT_PROVIDER:-gemini}
+      # 파일 저장소: local(기본, 아래 uploads 볼륨 사용) 또는 s3
+      FILE_STORAGE_TYPE: ${FILE_STORAGE_TYPE:-local}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_S3_PUBLIC_BASE_URL: ${AWS_S3_PUBLIC_BASE_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    ports:
+      - "8081:8080"
+    volumes:
+      - tp-hr-uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    image: smartrad-frontend:latest
+    container_name: tp-hr-frontend
+    restart: unless-stopped
+    mem_limit: 200m
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  tp-hr-mysql-data:
+  tp-hr-uploads:
