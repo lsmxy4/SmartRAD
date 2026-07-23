@@ -84,7 +84,7 @@ export default function DashboardHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <SessionTimer />
         <NotificationBell />
 
@@ -94,7 +94,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("attendance:self-refresh"))
             }
-            className="flex h-10 items-center gap-2 rounded-md bg-[#4A5DDF] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="flex h-10 items-center gap-2 whitespace-nowrap rounded-md bg-[#4A5DDF] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             <ArrowPathIcon className="h-4 w-4" />
             <span>새로고침</span>
@@ -105,7 +105,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("attendance:my-refresh"))
             }
-            className="flex h-10 items-center gap-2 rounded-md bg-[#4A5DDF] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="flex h-10 items-center gap-2 whitespace-nowrap rounded-md bg-[#4A5DDF] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             <ArrowPathIcon className="h-4 w-4" />
             <span>새로고침</span>
@@ -116,7 +116,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("leave:my-request"))
             }
-            className="flex h-10 items-center gap-2 rounded-md bg-[#4A5DDF] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="flex h-10 items-center gap-2 whitespace-nowrap rounded-md bg-[#4A5DDF] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             <PlusIcon className="h-4 w-4" />
             <span>휴가 신청</span>
@@ -127,7 +127,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("appointment:register"))
             }
-            className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 whitespace-nowrap bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
           >
             <PlusIcon className="w-4 h-4" />
             신규 발령 등록
@@ -139,7 +139,7 @@ export default function DashboardHeader() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("attendance:export"))
               }
-              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              className="flex items-center gap-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               내보내기
@@ -150,7 +150,7 @@ export default function DashboardHeader() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("attendance:register"))
               }
-              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 whitespace-nowrap bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
             >
               <ClockIcon className="h-4 w-4" />
               근태 등록
@@ -163,7 +163,7 @@ export default function DashboardHeader() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("certificate:export"))
               }
-              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              className="flex items-center gap-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               일괄 다운로드
@@ -174,7 +174,7 @@ export default function DashboardHeader() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("certificate:register"))
               }
-              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 whitespace-nowrap bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
             >
               <PlusIcon className="w-4 h-4" />
               발급 신청
@@ -186,7 +186,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("notice:register"))
             }
-            className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 whitespace-nowrap bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
           >
             <PlusIcon className="w-4 h-4" />
             공지사항 등록
@@ -198,7 +198,7 @@ export default function DashboardHeader() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("leave:approval-export"))
               }
-              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              className="flex items-center gap-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               내보내기
@@ -209,7 +209,7 @@ export default function DashboardHeader() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("leave:approval-pending"))
               }
-              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 whitespace-nowrap bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
             >
               <ClockIcon className="h-4 w-4" />
               승인 대기만 보기
@@ -221,7 +221,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("leave:usage-report"))
             }
-            className="flex h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            className="flex h-9 items-center gap-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
           >
             <ArrowDownTrayIcon className="h-4 w-4" />
             리포트 출력
@@ -232,7 +232,7 @@ export default function DashboardHeader() {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("event-support:export"))
             }
-            className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
           >
             <ArrowDownTrayIcon className="h-4 w-4" />
             내보내기
@@ -242,7 +242,7 @@ export default function DashboardHeader() {
             <button
               type="button"
               onClick={() => router.push("/employees/new")}
-              className="flex items-center gap-2 bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 whitespace-nowrap bg-[#4A5DDF] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
             >
               <UserPlusIcon className="w-4 h-4" />
               직원 등록
