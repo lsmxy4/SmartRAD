@@ -7,6 +7,7 @@ import erp.system.auditlog.entity.AuditLog;
 import erp.system.auditlog.service.AuditLogService;
 import erp.system.common.exception.BusinessException;
 import erp.system.common.exception.ErrorCode;
+import erp.system.common.file.FileStorageService;
 import erp.system.common.util.SoftDeleteAware;
 import erp.system.department.entity.Department;
 import erp.system.department.repository.DepartmentRepository;
@@ -38,6 +39,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.Year;
@@ -60,6 +62,7 @@ public class EmployeeService {
     private final LeaveRequestService leaveRequestService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final FileStorageService fileStorageService;
 
     private static String employeeStatusLabel(String status) {
         if (status == null) return "-";
@@ -197,6 +200,7 @@ public class EmployeeService {
     public EmployeeResponse update(Long employeeId, EmployeeUpdateRequest request, Long actorId, boolean actorIsAdmin) {
         Employee employee = findActive(employeeId);
         String previousStatus = employee.getEmployeeStatusCode();
+        String previousProfileImage = employee.getProfileImage();
 
         employee.update(
                 resolveEmploymentType(request.employmentTypeId()),
@@ -213,6 +217,11 @@ public class EmployeeService {
                 request.accountHolder(),
                 request.profileImage()
         );
+
+        if (StringUtils.hasText(previousProfileImage)
+                && !previousProfileImage.equals(request.profileImage())) {
+            fileStorageService.delete(previousProfileImage);
+        }
 
         boolean actorIsSomeoneElse = actorId != null && !actorId.equals(employeeId);
         if (actorIsAdmin && actorIsSomeoneElse && !employee.getEmployeeStatusCode().equals(previousStatus)) {
@@ -235,6 +244,14 @@ public class EmployeeService {
         }
 
         return EmployeeResponse.from(employee);
+    }
+
+    @Transactional
+    public String uploadProfileImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+        return fileStorageService.store(file).url();
     }
 
     @Transactional

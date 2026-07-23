@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { UserIcon, PencilSquareIcon, TrashIcon, ClockIcon, CurrencyDollarIcon, BuildingOfficeIcon, BriefcaseIcon, IdentificationIcon } from "@heroicons/react/24/outline";
 import { getEmployeeStatusLabel, getEmployeeStatusBadgeClasses } from "@/lib/employeeStatus";
 import { EMPLOYEE_DOCUMENT_TYPE_OPTIONS } from "@/components/employee/documentTypes";
+import { resolveFileUrl } from "@/lib/fileUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
-const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
@@ -220,7 +220,7 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
           <div className="flex items-center gap-5">
             {data.profileImage ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.profileImage} alt={`${data.name} 프로필 사진`} className="w-20 h-20 rounded-full object-cover shadow-md" />
+              <img src={resolveFileUrl(data.profileImage)} alt={`${data.name} 프로필 사진`} className="w-20 h-20 rounded-full object-cover shadow-md" />
             ) : (
               <div className="w-20 h-20 bg-blue-500 text-white rounded-full flex items-center justify-center text-3xl font-bold shadow-md">
                 {data.name ? data.name.charAt(0) : '?'}
@@ -323,7 +323,7 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
                     </p>
                     {document ? (
                       <a
-                        href={`${FILE_ORIGIN}${document.attachmentUrl}`}
+                        href={resolveFileUrl(document.attachmentUrl)}
                         target="_blank"
                         rel="noreferrer"
                         className="truncate text-sm font-semibold text-blue-600 hover:underline"

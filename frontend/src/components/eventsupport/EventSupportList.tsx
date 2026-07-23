@@ -12,9 +12,9 @@ import {
   type EventSupportPage,
   type EventSupportResponse,
 } from "./types";
+import { resolveFileUrl } from "@/lib/fileUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
-const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 const PAGE_SIZE = 10;
 
 function authHeaders(): HeadersInit {
@@ -220,7 +220,7 @@ export default function EventSupportList({ refreshKey, onActionComplete }: { ref
                     </td>
                     <td className="py-3 px-4 text-sm whitespace-nowrap">
                       {row.attachmentUrl ? (
-                        <a href={`${FILE_ORIGIN}${row.attachmentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs font-medium">파일보기</a>
+                        <a href={resolveFileUrl(row.attachmentUrl)} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs font-medium">파일보기</a>
                       ) : (
                         <span className="text-xs text-gray-400">-</span>
                       )}

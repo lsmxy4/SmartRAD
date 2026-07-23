@@ -46,7 +46,9 @@ public class EmployeeDocumentService {
         EmployeeDocument document = employeeDocumentRepository
                 .findByEmployee_EmployeeIdAndDocumentType(employeeId, documentType)
                 .map(existing -> {
+                    String previousUrl = existing.getAttachmentUrl();
                     existing.replace(stored.url(), stored.originalName());
+                    fileStorageService.delete(previousUrl);
                     return existing;
                 })
                 .orElseGet(() -> employeeDocumentRepository.save(
@@ -69,5 +71,6 @@ public class EmployeeDocumentService {
             throw new BusinessException(ErrorCode.EMPLOYEE_DOCUMENT_NOT_FOUND);
         }
         employeeDocumentRepository.delete(document);
+        fileStorageService.delete(document.getAttachmentUrl());
     }
 }

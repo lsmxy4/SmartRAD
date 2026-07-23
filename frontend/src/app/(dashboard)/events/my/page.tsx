@@ -5,9 +5,9 @@ import { GiftIcon, ClockIcon, CheckCircleIcon, XCircleIcon, CheckBadgeIcon, Arro
 import { eventTypeLabel, eventStatusBadge, formatAmount, getPolicyAmount, type EventSupportResponse } from "@/components/eventsupport/types";
 import MyEventSupportRegisterModal from "@/components/eventsupport/MyEventSupportRegisterModal";
 import Modal, { ModalCancelButton } from "@/components/common/Modal";
+import { resolveFileUrl } from "@/lib/fileUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
-const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
@@ -152,7 +152,7 @@ export default function MyEventSupportPage() {
                             </button>
                           )}
                           {row.attachmentUrl && (
-                            <a href={`${FILE_ORIGIN}${row.attachmentUrl}`} target="_blank" rel="noreferrer" className="text-xs px-2.5 py-1.5 bg-gray-50 text-gray-600 rounded-md border border-gray-200 hover:bg-gray-100 font-medium">
+                            <a href={resolveFileUrl(row.attachmentUrl)} target="_blank" rel="noreferrer" className="text-xs px-2.5 py-1.5 bg-gray-50 text-gray-600 rounded-md border border-gray-200 hover:bg-gray-100 font-medium">
                               첨부파일
                             </a>
                           )}

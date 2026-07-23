@@ -54,6 +54,8 @@ public class SecurityConfig {
                         // 등록/삭제/전사 조회는 관리자 전용
                         .requestMatchers(HttpMethod.GET, "/api/employees/payroll-summary").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/employees/*").authenticated()
+                        // 프로필 사진 업로드는 본인/관리자 모두 사용(신규 등록 시에도 필요) - 로그인만 하면 가능
+                        .requestMatchers(HttpMethod.POST, "/api/employees/profile-image").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/employees").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/employees/bulk").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/employees/*").authenticated()

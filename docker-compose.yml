@@ -28,6 +28,13 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       ASSISTANT_PROVIDER: ${ASSISTANT_PROVIDER:-gemini}
+      # 파일 저장소: local(기본, 아래 uploads 볼륨 사용) 또는 s3
+      FILE_STORAGE_TYPE: ${FILE_STORAGE_TYPE:-local}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_S3_PUBLIC_BASE_URL: ${AWS_S3_PUBLIC_BASE_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
     ports:
       - "8081:8080"
     volumes:

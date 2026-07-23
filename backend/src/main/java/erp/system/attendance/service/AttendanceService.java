@@ -113,6 +113,7 @@ public class AttendanceService {
         String attachmentName = attendance.getAttachmentName();
         if (attachment != null && !attachment.isEmpty()) {
             FileStorageService.StoredFile stored = fileStorageService.store(attachment);
+            fileStorageService.delete(attachmentUrl);
             attachmentUrl = stored.url();
             attachmentName = stored.originalName();
         }

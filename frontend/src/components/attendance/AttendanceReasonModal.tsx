@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/common/Modal";
+import { resolveFileUrl } from "@/lib/fileUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
-const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
@@ -118,7 +118,7 @@ export default function AttendanceReasonModal({
               <p className="mt-1 text-xs text-gray-400">
                 등록된 파일:{" "}
                 {initialAttachmentUrl ? (
-                  <a href={`${FILE_ORIGIN}${initialAttachmentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                  <a href={resolveFileUrl(initialAttachmentUrl)} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
                     {initialAttachmentName}
                   </a>
                 ) : (

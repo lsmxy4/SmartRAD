@@ -21,6 +21,19 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+file:
+  storage:
+    # local: 컨테이너/서버 디스크에 저장 (기본값, 로컬 개발용)
+    # s3: AWS S3 버킷에 저장 (운영 배포용, 아래 aws.s3 설정 필요)
+    type: ${FILE_STORAGE_TYPE:local}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:}
+    region: ${AWS_REGION:ap-northeast-2}
+    # CloudFront 등 CDN을 앞단에 두는 경우 공개 접근 도메인을 지정 (미설정 시 S3 기본 URL 사용)
+    public-base-url: ${AWS_S3_PUBLIC_BASE_URL:}
+
 jwt:
   secret: ${JWT_SECRET:dev-only-please-override-this-secret-key-in-production-0123456789}
   access-token-validity-seconds: 3600

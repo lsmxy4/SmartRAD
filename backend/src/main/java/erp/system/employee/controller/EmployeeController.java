@@ -11,6 +11,7 @@ import erp.system.employee.dto.EmployeePayrollSummaryResponse;
 import erp.system.employee.dto.EmployeeResponse;
 import erp.system.employee.dto.EmployeeSummaryResponse;
 import erp.system.employee.dto.EmployeeUpdateRequest;
+import erp.system.employee.dto.ProfileImageUploadResponse;
 import erp.system.employee.service.EmployeeService;
 import erp.system.common.exception.BusinessException;
 import erp.system.common.exception.ErrorCode;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -70,6 +72,11 @@ public class EmployeeController {
     public ResponseEntity<EmployeeResponse> create(@Valid @RequestBody EmployeeCreateRequest request,
                                                     @AuthenticationPrincipal Long requesterId) {
         return ResponseEntity.status(HttpStatus.CREATED).body(employeeService.create(request, requesterId));
+    }
+
+    @PostMapping("/profile-image")
+    public ProfileImageUploadResponse uploadProfileImage(@RequestParam("file") MultipartFile file) {
+        return new ProfileImageUploadResponse(employeeService.uploadProfileImage(file));
     }
 
     @PostMapping("/bulk")

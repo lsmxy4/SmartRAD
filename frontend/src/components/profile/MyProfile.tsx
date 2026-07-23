@@ -6,6 +6,7 @@ import { getEmployeeStatusLabel, getEmployeeStatusBadgeClasses } from "@/lib/emp
 import { certificateTypeLabel, statusBadge, type CertificateIssueResponse } from "@/components/certificate/types";
 import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/common/Modal";
 import { EMPLOYEE_DOCUMENT_TYPE_OPTIONS } from "@/components/employee/documentTypes";
+import { resolveFileUrl } from "@/lib/fileUrl";
 
 declare global {
   interface Window {
@@ -20,11 +21,15 @@ declare global {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
-const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
   return token ? { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+}
+
+function authHeadersMultipart(): HeadersInit {
+  const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 interface EmployeeDetailData {
@@ -173,6 +178,8 @@ export default function MyProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [addressSearchOpen, setAddressSearchOpen] = useState(false);
   const addressLayerRef = useRef<HTMLDivElement>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     const employeeId = window.localStorage.getItem("employeeId") ?? window.sessionStorage.getItem("employeeId");
@@ -266,11 +273,20 @@ export default function MyProfile() {
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditForm((prev) => ({ ...prev, profileImage: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    setProfileImageFile(file);
+    setProfileImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeProfileImage = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    setEditForm((prev) => ({ ...prev, profileImage: null }));
+  };
+
+  const closeEditModal = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    setIsEditModalOpen(false);
   };
 
   const handleUpdateInfo = async (e: React.FormEvent) => {
@@ -278,6 +294,19 @@ export default function MyProfile() {
     if (!profile) return;
     setIsSaving(true);
     try {
+      let profileImageUrl = editForm.profileImage;
+      if (profileImageFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", profileImageFile);
+        const uploadRes = await fetch(`${API_BASE_URL}/employees/profile-image`, {
+          method: "POST",
+          headers: authHeadersMultipart(),
+          body: uploadFormData,
+        });
+        if (!uploadRes.ok) throw new Error("프로필 사진 업로드에 실패했습니다.");
+        profileImageUrl = ((await uploadRes.json()) as { url: string }).url;
+      }
+
       const payload = {
         employmentTypeId: profile.employmentTypeId,
         name: profile.name,
@@ -293,7 +322,7 @@ export default function MyProfile() {
         bankName: profile.bankName,
         accountNumber: profile.accountNumber,
         accountHolder: profile.accountHolder,
-        profileImage: editForm.profileImage
+        profileImage: profileImageUrl
       };
 
       const res = await fetch(`${API_BASE_URL}/employees/${profile.employeeId}`, {
@@ -303,7 +332,9 @@ export default function MyProfile() {
       });
 
       if (!res.ok) throw new Error("업데이트 실패");
-      
+
+      setProfileImageFile(null);
+      setProfileImagePreview(null);
       alert("정보가 성공적으로 수정되었습니다.");
       setIsEditModalOpen(false);
       fetchData(profile.employeeId.toString());
@@ -350,7 +381,7 @@ export default function MyProfile() {
             <div className="flex flex-col items-center mb-6 mt-4">
               {profile.profileImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.profileImage} alt={`${profile.name} 프로필 사진`} className="w-24 h-24 rounded-full object-cover shadow-md mb-4 border-2 border-white ring-2 ring-blue-100" />
+                <img src={resolveFileUrl(profile.profileImage)} alt={`${profile.name} 프로필 사진`} className="w-24 h-24 rounded-full object-cover shadow-md mb-4 border-2 border-white ring-2 ring-blue-100" />
               ) : (
                 <div className="w-24 h-24 bg-blue-500 text-white rounded-full flex items-center justify-center text-4xl font-bold shadow-md mb-4 border-2 border-white ring-2 ring-blue-100">
                   {profile.name ? profile.name.charAt(0) : '?'}
@@ -592,7 +623,7 @@ export default function MyProfile() {
                           </p>
                           {document ? (
                             <a
-                              href={`${FILE_ORIGIN}${document.attachmentUrl}`}
+                              href={resolveFileUrl(document.attachmentUrl)}
                               target="_blank"
                               rel="noreferrer"
                               className="truncate text-sm font-semibold text-blue-600 hover:underline"
@@ -618,12 +649,12 @@ export default function MyProfile() {
         <Modal
           icon={PencilSquareIcon}
           title="개인 연락처 정보 수정"
-          onClose={() => setIsEditModalOpen(false)}
+          onClose={closeEditModal}
           as="form"
           onSubmit={handleUpdateInfo}
           footer={
             <>
-              <ModalCancelButton onClick={() => setIsEditModalOpen(false)} disabled={isSaving} />
+              <ModalCancelButton onClick={closeEditModal} disabled={isSaving} />
               <ModalPrimaryButton type="submit" disabled={isSaving}>
                 {isSaving ? "저장 중..." : "저장"}
               </ModalPrimaryButton>
@@ -635,9 +666,9 @@ export default function MyProfile() {
                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">프로필 사진</h3>
                   </div>
                   <div className="p-4 flex items-center gap-4">
-                    {editForm.profileImage ? (
+                    {profileImagePreview || editForm.profileImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={editForm.profileImage} alt="프로필 사진" className="w-16 h-16 rounded-full object-cover shadow-sm border border-gray-100" />
+                      <img src={profileImagePreview ?? resolveFileUrl(editForm.profileImage)} alt="프로필 사진" className="w-16 h-16 rounded-full object-cover shadow-sm border border-gray-100" />
                     ) : (
                       <div className="w-16 h-16 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-sm">
                         {profile.name ? profile.name.charAt(0) : "?"}
@@ -647,10 +678,10 @@ export default function MyProfile() {
                       사진 변경
                       <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
                     </label>
-                    {editForm.profileImage && (
+                    {(profileImagePreview || editForm.profileImage) && (
                       <button
                         type="button"
-                        onClick={() => setEditForm((prev) => ({ ...prev, profileImage: null }))}
+                        onClick={removeProfileImage}
                         className="px-3 py-1.5 text-sm font-medium text-rose-600 bg-white border border-rose-200 rounded-md hover:bg-rose-50"
                       >
                         사진 삭제

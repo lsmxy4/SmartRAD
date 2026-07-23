@@ -255,7 +255,7 @@ export default function NewEmployeePage() {
   const [positions, setPositions] = useState<Option[]>([]);
   const [employmentTypes, setEmploymentTypes] = useState<Option[]>([]);
   const [managers, setManagers] = useState<Option[]>([]);
-  const [profileImage, setProfileImage] = useState<{ name: string; preview: string } | null>(null);
+  const [profileImage, setProfileImage] = useState<{ name: string; file: File; preview: string } | null>(null);
   const [documentFiles, setDocumentFiles] = useState<Record<string, File>>({});
   const [fileInputKey, setFileInputKey] = useState(0);
   const [profileImageInputKey, setProfileImageInputKey] = useState(0);
@@ -371,6 +371,19 @@ export default function NewEmployeePage() {
     setError(null);
     setIsSubmitting(true);
     try {
+      let profileImageUrl: string | null = null;
+      if (profileImage) {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", profileImage.file);
+        const uploadRes = await fetch(`${API_BASE_URL}/employees/profile-image`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: uploadFormData,
+        });
+        if (!uploadRes.ok) throw new Error("프로필 사진 업로드에 실패했습니다.");
+        profileImageUrl = ((await uploadRes.json()) as { url: string }).url;
+      }
+
       const res = await fetch(`${API_BASE_URL}/employees`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -388,7 +401,7 @@ export default function NewEmployeePage() {
             : null,
           hireDate: employee.hireDate || null,
           password: employee.birthDate.replaceAll("-", ""),
-          profileImage: profileImage?.preview ?? null,
+          profileImage: profileImageUrl,
         }),
       });
 
@@ -451,15 +464,7 @@ export default function NewEmployeePage() {
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setProfileImage({ name: file.name, preview: reader.result });
-      }
-    };
-
-    reader.readAsDataURL(file);
+    setProfileImage({ name: file.name, file, preview: URL.createObjectURL(file) });
   };
 
   const handleDocumentFileChange = (documentType: string) => (event: ChangeEvent<HTMLInputElement>) => {
