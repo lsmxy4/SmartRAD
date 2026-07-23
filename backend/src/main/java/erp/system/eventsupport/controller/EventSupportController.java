@@ -36,12 +36,11 @@ public class EventSupportController {
             @AuthenticationPrincipal Long employeeId,
             @RequestParam String eventType,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate eventDate,
-            @RequestParam BigDecimal requestAmount,
             @RequestParam(required = false) String reason,
             @RequestParam(required = false) MultipartFile attachment
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(eventSupportService.createMine(employeeId, eventType, eventDate, requestAmount, reason, attachment));
+                .body(eventSupportService.createMine(employeeId, eventType, eventDate, reason, attachment));
     }
 
     @GetMapping("/search")

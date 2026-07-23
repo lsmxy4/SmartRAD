@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GiftIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import { formatAmount, type EventSupportPage, type EventSupportResponse } from "./types";
+import { formatAmount, getPolicyAmount, type EventSupportPage, type EventSupportResponse } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
@@ -45,7 +45,7 @@ export default function EventSupportStats({ refreshKey }: { refreshKey?: number 
   const monthlyTotal = monthlyRows?.length ?? null;
   const pending = rows?.filter((r) => r.status === "PENDING").length ?? null;
   const paidRows = rows?.filter((r) => r.status === "PAID") ?? null;
-  const paidTotalAmount = paidRows?.reduce((sum, r) => sum + r.requestAmount, 0) ?? null;
+  const paidTotalAmount = paidRows?.reduce((sum, r) => sum + getPolicyAmount(r.eventType), 0) ?? null;
   const rejected = rows?.filter((r) => r.status === "REJECTED").length ?? null;
 
   const cards = [

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserIcon, PencilSquareIcon, TrashIcon, ClockIcon, CurrencyDollarIcon, BuildingOfficeIcon, BriefcaseIcon, IdentificationIcon } from "@heroicons/react/24/outline";
 import { getEmployeeStatusLabel, getEmployeeStatusBadgeClasses } from "@/lib/employeeStatus";
+import { EMPLOYEE_DOCUMENT_TYPE_OPTIONS } from "@/components/employee/documentTypes";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
+const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
@@ -37,6 +39,14 @@ interface LeaveBalance {
   remainDays: number;
 }
 
+type EmployeeDocument = {
+  employeeDocumentId: number;
+  documentType: string;
+  attachmentUrl: string;
+  attachmentName: string;
+  createdAt: string;
+};
+
 function formatTenure(hireDate: string | null) {
   if (!hireDate) return "-";
   const hire = new Date(hireDate);
@@ -63,15 +73,19 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
   const router = useRouter();
   const [data, setData] = useState<EmployeeDetailData | null>(null);
   const [annualLeaveDays, setAnnualLeaveDays] = useState<number | null>(null);
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
+  const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (employeeId) {
       fetchDetail();
       fetchLeaveBalance();
+      fetchDocuments();
     } else {
       setData(null);
       setAnnualLeaveDays(null);
+      setDocuments([]);
     }
   }, [employeeId, refreshKey]);
 
@@ -103,6 +117,58 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
       }
     } catch (error) {
       console.error("Failed to fetch leave balance", error);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees/${employeeId}/documents`, { headers: authHeaders() });
+      if (res.ok) {
+        setDocuments(await res.json());
+      }
+    } catch (error) {
+      console.error("Failed to fetch employee documents", error);
+    }
+  };
+
+  const handleDocumentUpload = async (documentType: string, file: File) => {
+    setUploadingType(documentType);
+    try {
+      const formData = new FormData();
+      formData.append("documentType", documentType);
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE_URL}/employees/${employeeId}/documents`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData,
+      });
+      if (res.ok) {
+        await fetchDocuments();
+      } else {
+        alert("서류 업로드에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("서류 업로드 중 오류가 발생했습니다.");
+    } finally {
+      setUploadingType(null);
+    }
+  };
+
+  const handleDocumentDelete = async (documentId: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees/${employeeId}/documents/${documentId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        setDocuments((current) => current.filter((document) => document.employeeDocumentId !== documentId));
+      } else {
+        alert("서류 삭제에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("서류 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -237,6 +303,67 @@ export default function EmployeeDetail({ employeeId, onEditClick, onDeleteClick,
                 <span className="text-gray-900 font-medium">{data.managerName || '-'}</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Documents */}
+        <div className="border border-gray-100 rounded-lg overflow-hidden mb-8">
+          <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+            <h4 className="text-sm font-bold text-gray-900 text-center">첨부 서류</h4>
+          </div>
+          <div className="p-4 space-y-2">
+            {EMPLOYEE_DOCUMENT_TYPE_OPTIONS.map((docType) => {
+              const document = documents.find((doc) => doc.documentType === docType.value);
+              const uploading = uploadingType === docType.value;
+              return (
+                <div key={docType.value} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="min-w-0 flex-1 flex items-center gap-4">
+                    <p className="text-sm font-bold text-gray-700 w-32 shrink-0">
+                      {docType.label} {docType.required ? <b className="text-rose-500">*</b> : null}
+                    </p>
+                    {document ? (
+                      <a
+                        href={`${FILE_ORIGIN}${document.attachmentUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="truncate text-sm font-semibold text-blue-600 hover:underline"
+                      >
+                        {document.attachmentName}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-gray-400 font-medium">미제출</p>
+                    )}
+                  </div>
+                  {role === "ADMIN" && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <label className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
+                        {uploading ? "업로드 중..." : document ? "재업로드" : "파일 선택"}
+                        <input
+                          type="file"
+                          disabled={uploading}
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (file) void handleDocumentUpload(docType.value, file);
+                          }}
+                        />
+                      </label>
+                      {document && (
+                        <button
+                          type="button"
+                          onClick={() => handleDocumentDelete(document.employeeDocumentId)}
+                          className="flex items-center justify-center rounded-md border border-gray-300 bg-white p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
+                          aria-label={`${docType.label} 삭제`}
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

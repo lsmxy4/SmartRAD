@@ -94,12 +94,35 @@ body {
 
 @media print {
   body:has(.payroll-statement-print) aside,
-  body:has(.payroll-statement-print) > div header,
-  body:has(.payroll-statement-print) .payroll-statement-print button {
+  body:has(.payroll-statement-print) > div > header,
+  body:has(.payroll-statement-print) button {
     display: none !important;
   }
 
   body:has(.payroll-statement-print) main {
     padding: 0 !important;
+  }
+  
+  body:has(.payroll-statement-print:has([role="dialog"])) .payroll-statement-print > *:not([role="dialog"]) {
+    display: none !important;
+  }
+
+  body:has(.payroll-statement-print) [role="dialog"] {
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  
+  body:has(.payroll-statement-print) [role="dialog"] > div {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  body:has(.payroll-statement-print) [role="dialog"] .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
   }
 }

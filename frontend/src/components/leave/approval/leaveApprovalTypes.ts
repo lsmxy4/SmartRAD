@@ -1,4 +1,4 @@
-export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 
 export interface LeaveRequestResponse {
   leaveRequestId: number;
@@ -62,4 +62,4 @@ export interface LeaveFilters {
   keyword: string;
 }
 
-export const STATUS_LABELS: Record<LeaveStatus, string> = { PENDING: "승인 대기", APPROVED: "승인 완료", REJECTED: "반려" };
+export const STATUS_LABELS: Record<LeaveStatus, string> = { PENDING: "승인 대기", APPROVED: "승인 완료", REJECTED: "반려", CANCELED: "취소" };

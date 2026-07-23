@@ -4,7 +4,7 @@ import { CheckIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon, ChevronLeftIc
 import type { LeaveApprovalRow } from "./leaveApprovalTypes";
 import { STATUS_LABELS } from "./leaveApprovalTypes";
 
-const statusStyles = { PENDING: "bg-amber-50 text-amber-700", APPROVED: "bg-emerald-50 text-emerald-700", REJECTED: "bg-rose-50 text-rose-700" };
+const statusStyles = { PENDING: "bg-amber-50 text-amber-700", APPROVED: "bg-emerald-50 text-emerald-700", REJECTED: "bg-rose-50 text-rose-700", CANCELED: "bg-gray-50 text-gray-700" };
 function date(value: string) { return value.slice(0, 10).replaceAll("-", "."); }
 function leaveTypeStyle(name: string) { if (name.includes("연차")) return "bg-indigo-50 text-indigo-700"; if (name.includes("반차")) return "bg-sky-50 text-sky-700"; if (name.includes("경조")) return "bg-emerald-50 text-emerald-700"; if (name.includes("병가")) return "bg-amber-50 text-amber-700"; return "bg-gray-100 text-gray-600"; }
 interface Props { rows: LeaveApprovalRow[]; total: number; loading: boolean; selectedIds: number[]; page: number; pageSize: number; onPage: (page: number) => void; onPageSize: (size: number) => void; onToggle: (id: number) => void; onToggleAll: () => void; onApprove: (row: LeaveApprovalRow) => void; onReject: (row: LeaveApprovalRow) => void; onDetail: (row: LeaveApprovalRow) => void; onBulk: () => void; }

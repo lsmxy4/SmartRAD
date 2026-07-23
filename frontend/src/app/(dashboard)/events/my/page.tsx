@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GiftIcon, ClockIcon, CheckCircleIcon, XCircleIcon, CheckBadgeIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
-import { eventTypeLabel, eventStatusBadge, formatAmount, type EventSupportResponse } from "@/components/eventsupport/types";
+import { eventTypeLabel, eventStatusBadge, formatAmount, getPolicyAmount, type EventSupportResponse } from "@/components/eventsupport/types";
 import MyEventSupportRegisterModal from "@/components/eventsupport/MyEventSupportRegisterModal";
 import Modal, { ModalCancelButton } from "@/components/common/Modal";
 
@@ -98,7 +98,8 @@ export default function MyEventSupportPage() {
                 <th className="py-4 px-6 whitespace-nowrap">신청일</th>
                 <th className="py-4 px-6 whitespace-nowrap">경조사 유형</th>
                 <th className="py-4 px-6 whitespace-nowrap">경조사 일자</th>
-                <th className="py-4 px-6 whitespace-nowrap text-right">신청 금액</th>
+                <th className="py-4 px-6 whitespace-nowrap">사유</th>
+                <th className="py-4 px-6 whitespace-nowrap text-right">지원 금액</th>
                 <th className="py-4 px-6 whitespace-nowrap">처리 상태</th>
                 <th className="py-4 px-6 whitespace-nowrap">비고</th>
               </tr>
@@ -106,7 +107,7 @@ export default function MyEventSupportPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-gray-500">
+                  <td colSpan={7} className="py-16 text-center text-gray-500">
                     <div className="flex justify-center items-center gap-2">
                       <ArrowPathIcon className="w-5 h-5 animate-spin" />
                       내역을 불러오는 중입니다...
@@ -115,11 +116,11 @@ export default function MyEventSupportPage() {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-rose-500">{error}</td>
+                  <td colSpan={7} className="py-16 text-center text-rose-500">{error}</td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500">
                       <GiftIcon className="w-12 h-12 text-gray-300 mb-3" />
                       <p className="text-base font-medium text-gray-900 mb-1">신청 내역이 없습니다</p>
@@ -135,7 +136,8 @@ export default function MyEventSupportPage() {
                       <td className="py-4 px-6 text-sm text-gray-600 whitespace-nowrap">{row.createdAt.substring(0, 10)}</td>
                       <td className="py-4 px-6 text-sm font-semibold text-gray-900 whitespace-nowrap">{eventTypeLabel(row.eventType)}</td>
                       <td className="py-4 px-6 text-sm text-gray-600 whitespace-nowrap">{row.eventDate}</td>
-                      <td className="py-4 px-6 text-sm font-semibold text-gray-900 text-right whitespace-nowrap">{formatAmount(row.requestAmount)}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600 max-w-xs truncate" title={row.reason || ""}>{row.reason || "-"}</td>
+                      <td className="py-4 px-6 text-sm font-semibold text-gray-900 text-right whitespace-nowrap">{formatAmount(getPolicyAmount(row.eventType))}</td>
                       <td className="py-4 px-6 text-sm whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {getStatusIcon(row.status)}

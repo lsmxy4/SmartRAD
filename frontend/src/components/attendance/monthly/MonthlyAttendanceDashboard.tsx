@@ -43,11 +43,11 @@ export default function MonthlyAttendanceDashboard() {
         ]);
         if (!summaryResponse.ok || !employeesResponse.ok || !departmentsResponse.ok || dailyResponses.some((response) => !response.ok)) throw new Error("request failed");
         const [summaries, employeePage] = await Promise.all([summaryResponse.json() as Promise<MonthlySummaryResponse[]>, employeesResponse.json() as Promise<EmployeePage>]);
-        await departmentsResponse.json() as Department[];
+        const departmentsList = await departmentsResponse.json() as Department[];
         const dailyData = await Promise.all(dailyResponses.map((response) => response.json() as Promise<AttendanceResponse[]>));
         const byDate = new Map(dates.map((date, index) => [date, Array.isArray(dailyData[index]) ? dailyData[index] : []]));
         const activeEmployees = (employeePage.content ?? []).filter((employee) => employee.employeeStatusCode === "ACTIVE");
-        if (!cancelled) setData(aggregateMonthly(selectedMonth, activeEmployees, Array.isArray(summaries) ? summaries : [], byDate));
+        if (!cancelled) setData(aggregateMonthly(selectedMonth, activeEmployees, Array.isArray(summaries) ? summaries : [], byDate, departmentsList));
       } catch { if (!cancelled) { setData(null); setError("월간 근태 정보를 불러오지 못했습니다."); } }
       finally { if (!cancelled) setLoading(false); }
     }
@@ -65,5 +65,5 @@ export default function MonthlyAttendanceDashboard() {
 
   useEffect(() => { const handleReport = () => exportReport(); window.addEventListener("attendance:monthly-report", handleReport); return () => window.removeEventListener("attendance:monthly-report", handleReport); }, [exportReport]);
 
-  return <div className="mx-auto max-w-[1600px] space-y-4 pb-8">{error && <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"><span>{error}</span><button type="button" onClick={() => setRetryKey((key) => key + 1)} className="rounded-md border border-rose-200 bg-white px-3 py-1.5 font-semibold hover:bg-rose-50">재시도</button></div>}<MonthlyAttendanceStats data={data} loading={loading} /><div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]"><DailyAttendanceTrend month={selectedMonth} data={data?.trend ?? []} loading={loading} /><MonthlyAttendanceDonut data={data} loading={loading} /></div><div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[220px_minmax(0,1fr)_260px]"><DepartmentAttendanceRates data={data?.departments ?? []} /><EmployeeMonthlySummary rows={data?.employees ?? []} /><AttendanceWarningEmployees rows={data?.employees ?? []} /></div></div>;
+  return <div className="mx-auto max-w-[1600px] space-y-4 pb-8">{error && <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"><span>{error}</span><button type="button" onClick={() => setRetryKey((key) => key + 1)} className="rounded-md border border-rose-200 bg-white px-3 py-1.5 font-semibold hover:bg-rose-50">재시도</button></div>}<MonthlyAttendanceStats data={data} loading={loading} /><div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]"><DailyAttendanceTrend month={selectedMonth} data={data?.trend ?? []} loading={loading} /><MonthlyAttendanceDonut data={data} loading={loading} /></div><div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[220px_minmax(0,1fr)_260px]"><DepartmentAttendanceRates data={data?.departments ?? []} /><EmployeeMonthlySummary rows={data?.employees ?? []} departments={data?.departments ?? []} /><AttendanceWarningEmployees rows={data?.employees ?? []} /></div></div>;
 }

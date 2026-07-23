@@ -7,7 +7,7 @@ export interface EventSupportResponse {
   positionName: string | null;
   eventType: string;
   eventDate: string;
-  requestAmount: number;
+  supportAmount: number;
   reason: string | null;
   attachmentUrl: string | null;
   attachmentName: string | null;
@@ -40,6 +40,18 @@ export const EVENT_TYPE_OPTIONS = [
 
 export function eventTypeLabel(type: string) {
   return EVENT_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type;
+}
+
+export function getPolicyAmount(type: string): number {
+  switch (type) {
+    case "SELF_MARRIAGE": return 1000000;
+    case "CHILD_BIRTH": return 500000;
+    case "CHILD_MARRIAGE": return 500000;
+    case "PARENT_DEATH": return 1000000;
+    case "SPOUSE_DEATH": return 2000000;
+    case "CHILD_DEATH": return 1000000;
+    default: return 300000;
+  }
 }
 
 export const EVENT_STATUS_OPTIONS = [

@@ -74,6 +74,10 @@ public class LeaveRequestService {
         if (!request.getEmployee().getEmployeeId().equals(employeeId)) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
+        if (LeaveRequest.STATUS_APPROVED.equals(request.getStatus())) {
+            EmployeeLeaveBalance balance = findBalance(employeeId, request.getLeaveType().getLeaveTypeId());
+            balance.restore(request.getLeaveDays());
+        }
         request.cancel();
         return LeaveRequestResponse.from(request);
     }

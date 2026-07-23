@@ -23,6 +23,7 @@ export function aggregateMonthly(
   employees: EmployeeSummary[],
   summaries: MonthlySummaryResponse[],
   attendanceByDate: Map<string, AttendanceResponse[]>,
+  departmentsList: { departmentName: string }[] = [],
 ): MonthlyViewData {
   const dates = weekdayDates(month);
   const employeeMap = new Map(employees.map((employee) => [employee.employeeId, employee]));
@@ -55,13 +56,17 @@ export function aggregateMonthly(
   }).sort((a, b) => a.employeeName.localeCompare(b.employeeName, "ko"));
 
   const departmentGroups = new Map<string, { normal: number; classified: number }>();
+  departmentsList.forEach((dept) => {
+    departmentGroups.set(dept.departmentName, { normal: 0, classified: 0 });
+  });
+
   employeeRows.forEach((row) => {
     const group = departmentGroups.get(row.departmentName) ?? { normal: 0, classified: 0 };
     group.normal += row.normalDays;
     group.classified += row.normalDays + row.lateCount + row.absentCount + row.leaveDays;
     departmentGroups.set(row.departmentName, group);
   });
-  const departments: DepartmentRate[] = [...departmentGroups].filter(([, value]) => value.classified > 0).map(([name, value]) => ({ name, rate: percent(value.normal, value.classified) ?? 0 })).sort((a, b) => b.rate - a.rate);
+  const departments: DepartmentRate[] = [...departmentGroups].map(([name, value]) => ({ name, rate: percent(value.normal, value.classified) ?? 0 })).sort((a, b) => b.rate - a.rate || a.name.localeCompare(b.name, "ko"));
   const classifiedTotal = totals.normal + totals.late + totals.absent + totals.leave;
   const overtimeValues = summaries.map((item) => item.totalOvertimeMinutes).filter((value) => Number.isFinite(value));
   return { workdayCount: dates.length, attendanceRate: percent(totals.normal, classifiedTotal), normalCount: totals.normal, lateCount: totals.late, absentCount: totals.absent, leaveCount: totals.leave, averageOvertimeMinutes: overtimeValues.length ? overtimeValues.reduce((sum, value) => sum + value, 0) / overtimeValues.length : null, trend, employees: employeeRows, departments };

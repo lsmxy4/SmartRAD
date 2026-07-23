@@ -91,6 +91,7 @@ public class SecurityConfig {
 
                         // 휴가정책 관리 - 등록/삭제는 관리자 전용
                         .requestMatchers(HttpMethod.POST, "/api/leave-policies").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/leave-policies/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/leave-policies/**").hasRole("ADMIN")
 
                         // 휴가 신청 - 본인 신청/조회/취소는 로그인만 하면 가능, 관리자 대리등록/전체조회/

@@ -48,6 +48,18 @@ public class EventSupportService {
         };
     }
 
+    private static BigDecimal calculatePolicyAmount(String eventType) {
+        return switch (eventType) {
+            case EventSupport.TYPE_SELF_MARRIAGE -> new BigDecimal("1000000");
+            case EventSupport.TYPE_CHILD_BIRTH -> new BigDecimal("500000");
+            case EventSupport.TYPE_CHILD_MARRIAGE -> new BigDecimal("500000");
+            case EventSupport.TYPE_PARENT_DEATH -> new BigDecimal("1000000");
+            case EventSupport.TYPE_SPOUSE_DEATH -> new BigDecimal("2000000");
+            case EventSupport.TYPE_CHILD_DEATH -> new BigDecimal("1000000");
+            default -> new BigDecimal("300000");
+        };
+    }
+
     public List<EventSupportResponse> getMine(Long employeeId) {
         return eventSupportRepository.findAllByEmployee_EmployeeIdOrderByCreatedAtDesc(employeeId).stream()
                 .map(EventSupportResponse::from)
@@ -64,7 +76,7 @@ public class EventSupportService {
                 predicate = cb.and(predicate, cb.equal(root.get("status"), status));
             }
             if (StringUtils.hasText(keyword)) {
-                predicate = cb.and(predicate, cb.like(root.get("employee").get("name"), "%" + keyword + "%"));
+                predicate = cb.and(predicate, cb.like(root.join("employee").get("name"), "%" + keyword + "%"));
             }
             return predicate;
         };
@@ -73,7 +85,7 @@ public class EventSupportService {
 
     @Transactional
     public EventSupportResponse createMine(Long employeeId, String eventType, LocalDate eventDate,
-                                            BigDecimal requestAmount, String reason, MultipartFile attachment) {
+                                            String reason, MultipartFile attachment) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
@@ -85,11 +97,13 @@ public class EventSupportService {
             attachmentName = stored.originalName();
         }
 
+        BigDecimal supportAmount = calculatePolicyAmount(eventType);
+
         EventSupport eventSupport = EventSupport.builder()
                 .employee(employee)
                 .eventType(eventType)
                 .eventDate(eventDate)
-                .requestAmount(requestAmount)
+                .supportAmount(supportAmount)
                 .reason(reason)
                 .attachmentUrl(attachmentUrl)
                 .attachmentName(attachmentName)

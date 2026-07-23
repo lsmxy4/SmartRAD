@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GiftIcon } from "@heroicons/react/24/outline";
-import { EVENT_TYPE_OPTIONS } from "./types";
+import { EVENT_TYPE_OPTIONS, getPolicyAmount, formatAmount } from "./types";
 import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/common/Modal";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
@@ -28,7 +28,6 @@ interface Props {
 export default function MyEventSupportRegisterModal({ onClose, onSaved }: Props) {
   const [eventType, setEventType] = useState("SELF_MARRIAGE");
   const [eventDate, setEventDate] = useState(todayString());
-  const [requestAmount, setRequestAmount] = useState("");
   const [reason, setReason] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,11 +35,6 @@ export default function MyEventSupportRegisterModal({ onClose, onSaved }: Props)
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const amount = Number(requestAmount);
-    if (!amount || amount <= 0) {
-      setError("신청 금액을 올바르게 입력해주세요.");
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -48,7 +42,6 @@ export default function MyEventSupportRegisterModal({ onClose, onSaved }: Props)
       const formData = new FormData();
       formData.append("eventType", eventType);
       formData.append("eventDate", eventDate);
-      formData.append("requestAmount", String(amount));
       if (reason) formData.append("reason", reason);
       if (file) formData.append("attachment", file);
 
@@ -92,24 +85,15 @@ export default function MyEventSupportRegisterModal({ onClose, onSaved }: Props)
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
+              <p className="mt-1.5 text-sm text-blue-600 font-medium bg-blue-50 py-1.5 px-3 rounded-md border border-blue-100 flex items-center">
+                <span>예상 지원 금액:</span>
+                <span className="ml-auto font-bold text-base">{formatAmount(getPolicyAmount(eventType))}</span>
+              </p>
             </div>
 
             <div>
               <label className={labelClasses}>경조사 일자 *</label>
               <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required className={inputClasses} />
-            </div>
-
-            <div>
-              <label className={labelClasses}>신청 금액 *</label>
-              <input
-                type="number"
-                min={1}
-                value={requestAmount}
-                onChange={(e) => setRequestAmount(e.target.value)}
-                required
-                placeholder="예: 500000"
-                className={inputClasses}
-              />
             </div>
 
             <div>

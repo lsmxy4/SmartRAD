@@ -290,12 +290,13 @@ export default function PayrollItemsPage() {
           icon={BanknotesIcon}
           title={editingItemId != null ? "급여항목 수정" : "급여항목 등록"}
           onClose={() => setShowModal(false)}
+          bodyClassName="space-y-5 p-6"
           footer={<>
             <ModalCancelButton onClick={() => setShowModal(false)} />
             <ModalPrimaryButton onClick={handleSave} disabled={saving}>{saving ? "저장 중..." : "저장"}</ModalPrimaryButton>
           </>}
         >
-              <label className="space-y-1 text-sm font-semibold text-slate-700">
+              <label className="block space-y-1 text-sm font-semibold text-slate-700">
                 <span>항목명</span>
                 <input
                   value={itemName}
@@ -304,7 +305,7 @@ export default function PayrollItemsPage() {
                   placeholder="예: 식대"
                 />
               </label>
-              <label className="space-y-1 text-sm font-semibold text-slate-700">
+              <label className="block space-y-1 text-sm font-semibold text-slate-700">
                 <span>유형</span>
                 <select
                   value={itemTypeCode}
@@ -326,7 +327,7 @@ export default function PayrollItemsPage() {
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <label className="space-y-1 text-sm font-semibold text-slate-700">
+                <label className="block space-y-1 text-sm font-semibold text-slate-700">
                   <span>기본금액</span>
                   <input
                     value={defaultAmount}
@@ -336,7 +337,7 @@ export default function PayrollItemsPage() {
                     placeholder="예: 10000"
                   />
                 </label>
-                <label className="space-y-1 text-sm font-semibold text-slate-700">
+                <label className="block space-y-1 text-sm font-semibold text-slate-700">
                   <span>비율(%)</span>
                   <input
                     value={rate}

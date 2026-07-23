@@ -48,8 +48,8 @@ public class EventSupport extends CreatedAtEntity {
     @Column(name = "event_date", nullable = false)
     private LocalDate eventDate;
 
-    @Column(name = "request_amount", nullable = false, precision = 15, scale = 2)
-    private BigDecimal requestAmount;
+    @Column(name = "support_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal supportAmount;
 
     @Column(name = "reason", length = 500)
     private String reason;
@@ -77,12 +77,12 @@ public class EventSupport extends CreatedAtEntity {
     private LocalDate paidAt;
 
     @Builder
-    public EventSupport(Employee employee, String eventType, LocalDate eventDate, BigDecimal requestAmount,
+    public EventSupport(Employee employee, String eventType, LocalDate eventDate, BigDecimal supportAmount,
                          String reason, String attachmentUrl, String attachmentName) {
         this.employee = employee;
         this.eventType = eventType;
         this.eventDate = eventDate;
-        this.requestAmount = requestAmount;
+        this.supportAmount = supportAmount;
         this.reason = reason;
         this.attachmentUrl = attachmentUrl;
         this.attachmentName = attachmentName;

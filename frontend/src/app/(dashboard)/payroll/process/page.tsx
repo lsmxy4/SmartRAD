@@ -11,6 +11,7 @@ import {
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
   PaperAirplaneIcon,
+  PrinterIcon,
   UserGroupIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -166,7 +167,7 @@ function toRow(
     depositor: employee?.accountHolder ?? payroll.employeeNameSnapshot,
     paymentDate: payroll.paymentDate ?? "-",
     accountStatus,
-    paymentStatus: accountStatus === "미등록" ? "지급실패" : paymentStatus,
+    paymentStatus: (paymentStatus !== "지급완료" && accountStatus === "미등록") ? "지급실패" : paymentStatus,
     processedAt:
       paymentStatus === "지급완료"
         ? `${payroll.paymentDate ?? "-"} 09:12`
@@ -265,6 +266,7 @@ export default function PayrollProcessPage() {
   );
   const [refreshKey, setRefreshKey] = useState(0);
   const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
+  const [failedModalOpen, setFailedModalOpen] = useState(false);
 
   const refreshRows = () => setRefreshKey((key) => key + 1);
 
@@ -635,6 +637,39 @@ export default function PayrollProcessPage() {
     setDetailError("");
   };
 
+  const downloadStatement = () => {
+    if (!detailData) return;
+    const earnings = detailData.details.filter((item) => item.itemTypeCode === "EARNING");
+    const deductions = detailData.details.filter((item) => item.itemTypeCode === "DEDUCTION");
+    const totalEarnings = detailData.payroll.totalPayAmount ?? 0;
+    const totalDeductions = detailData.payroll.totalDeductionAmount ?? 0;
+    const netPay = detailData.payroll.realPayAmount ?? 0;
+
+    const formatDateStr = (val: string | null) => val ? val.replaceAll("-", ".") : "지급 예정";
+
+    const lines = [
+      "SmartHR 급여 명세서",
+      `${detailData.payroll.employeeNameSnapshot} 님의 ${formatMonth(detailData.payroll.payrollYearMonth)} 급여`,
+      `지급일: ${formatDateStr(detailData.payroll.paymentDate)}`,
+      "",
+      "[지급 항목]",
+      ...earnings.map((item) => `${item.itemName}: ${formatCurrency(item.amount)}`),
+      `지급 합계: ${formatCurrency(totalEarnings)}`,
+      "",
+      "[공제 항목]",
+      ...deductions.map((item) => `${item.itemName}: -${formatCurrency(item.amount)}`),
+      `공제 합계: -${formatCurrency(totalDeductions)}`,
+      "",
+      `실수령액: ${formatCurrency(netPay)}`,
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${detailData.payroll.employeeNameSnapshot}_${formatMonth(detailData.payroll.payrollYearMonth).replace(" ", "")}_급여명세서.txt`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   const exportTransferFile = () => {
     const targets = filteredRows.filter((row) => row.paymentStatus === "지급대기");
     if (targets.length === 0) {
@@ -718,7 +753,7 @@ export default function PayrollProcessPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-5 text-slate-900">
+    <div className="payroll-statement-print mx-auto max-w-[1600px] space-y-5 text-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">급여 지급 처리</h1>
@@ -786,6 +821,41 @@ export default function PayrollProcessPage() {
       {criteriaModalOpen && (
         <PaymentCriteriaModal onClose={() => setCriteriaModalOpen(false)} />
       )}
+      {failedModalOpen && (
+        <Modal
+          icon={ExclamationTriangleIcon}
+          title="지급 실패/미등록 직원 목록"
+          subtitle={`계좌정보 미등록 등으로 지급 실패 처리된 직원이 ${failedRows.length}명 있습니다.`}
+          onClose={() => setFailedModalOpen(false)}
+          maxWidth="xl"
+          footer={
+            <ModalCancelButton onClick={() => setFailedModalOpen(false)}>닫기</ModalCancelButton>
+          }
+        >
+          <div className="max-h-[60vh] overflow-y-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">사번</th>
+                  <th className="px-4 py-3 font-medium">이름</th>
+                  <th className="px-4 py-3 font-medium">은행</th>
+                  <th className="px-4 py-3 font-medium">계좌상태</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {failedRows.map(row => (
+                  <tr key={row.payrollId}>
+                    <td className="px-4 py-3 text-slate-600">{row.employeeNo}</td>
+                    <td className="px-4 py-3 font-bold">{row.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.bankName}</td>
+                    <td className="px-4 py-3 font-bold text-orange-600">{row.accountStatus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      )}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {summaryCards.map(({ icon: Icon, ...card }) => (
@@ -813,19 +883,25 @@ export default function PayrollProcessPage() {
         ))}
       </section>
 
-      <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-        <span className="inline-flex items-center gap-2">
-          <ExclamationTriangleIcon className="h-5 w-5" />
-          계좌정보 확인이 필요한 직원이{" "}
-          {failedRows.length.toLocaleString("ko-KR")}명 있습니다.
-          <span className="hidden text-xs font-medium md:inline">
-            계좌 오류가 있는 직원은 급여 지급 대상에서 자동 제외되었습니다.
+      {failedRows.length > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          <span className="inline-flex items-center gap-2">
+            <ExclamationTriangleIcon className="h-5 w-5" />
+            계좌정보 확인이 필요한 직원이{" "}
+            {failedRows.length.toLocaleString("ko-KR")}명 있습니다.
+            <span className="hidden text-xs font-medium md:inline">
+              계좌 오류가 있는 직원은 급여 지급 대상에서 자동 제외되었습니다.
+            </span>
           </span>
-        </span>
-        <button className="font-bold text-orange-600 hover:text-orange-700">
-          실패 대상 보기 ›
-        </button>
-      </div>
+          <button 
+            type="button" 
+            onClick={() => setFailedModalOpen(true)}
+            className="font-bold text-orange-600 hover:text-orange-700"
+          >
+            실패 대상 보기 ›
+          </button>
+        </div>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_1.4fr_auto_auto]">
@@ -987,7 +1063,7 @@ export default function PayrollProcessPage() {
                     colSpan={15}
                     className="px-4 py-12 text-center font-semibold text-slate-400"
                   >
-                    백엔드에서 급여 지급 데이터를 불러오는 중입니다.
+                    급여 지급 데이터를 불러오는 중입니다.
                   </td>
                 </tr>
               )}
@@ -1210,7 +1286,23 @@ export default function PayrollProcessPage() {
           onClose={closePayrollDetail}
           maxWidth="2xl"
           bodyClassName="max-h-[65vh] space-y-5 overflow-y-auto p-6"
-          footer={<ModalCancelButton onClick={closePayrollDetail}>닫기</ModalCancelButton>}
+          footer={
+            detailData ? (
+              <div className="flex w-full justify-between gap-3">
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => window.print()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <PrinterIcon className="h-4 w-4" /> 명세서 인쇄
+                  </button>
+                  <button type="button" onClick={downloadStatement} className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
+                    <DocumentArrowDownIcon className="h-4 w-4" /> 파일 저장
+                  </button>
+                </div>
+                <ModalCancelButton onClick={closePayrollDetail}>닫기</ModalCancelButton>
+              </div>
+            ) : (
+              <ModalCancelButton onClick={closePayrollDetail}>닫기</ModalCancelButton>
+            )
+          }
         >
               {detailLoading && (
                 <p className="py-8 text-center text-sm font-semibold text-slate-400">

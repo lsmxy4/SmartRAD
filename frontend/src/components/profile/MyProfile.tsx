@@ -5,8 +5,10 @@ import { UserIcon, BuildingOfficeIcon, BriefcaseIcon, IdentificationIcon, Envelo
 import { getEmployeeStatusLabel, getEmployeeStatusBadgeClasses } from "@/lib/employeeStatus";
 import { certificateTypeLabel, statusBadge, type CertificateIssueResponse } from "@/components/certificate/types";
 import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/common/Modal";
+import { EMPLOYEE_DOCUMENT_TYPE_OPTIONS } from "@/components/employee/documentTypes";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
+const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
@@ -37,6 +39,14 @@ interface EmployeeDetailData {
   profileImage: string | null;
   birthDate: string | null;
 }
+
+type EmployeeDocument = {
+  employeeDocumentId: number;
+  documentType: string;
+  attachmentUrl: string;
+  attachmentName: string;
+  createdAt: string;
+};
 
 interface AppointmentResponse {
   appointmentId: number;
@@ -127,7 +137,7 @@ function todayString() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-type TabType = "appointments" | "certificates" | "payroll";
+type TabType = "appointments" | "certificates" | "payroll" | "documents";
 
 export default function MyProfile() {
   const [profile, setProfile] = useState<EmployeeDetailData | null>(null);
@@ -136,6 +146,7 @@ export default function MyProfile() {
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
   const [certificateIssues, setCertificateIssues] = useState<CertificateIssueResponse[]>([]);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [activeTab, setActiveTab] = useState<TabType>("appointments");
@@ -160,13 +171,14 @@ export default function MyProfile() {
   const fetchData = async (employeeId: string) => {
     setLoading(true);
     try {
-      const [profileRes, appointmentsRes, leaveRes, attendanceRes, certificatesRes, payrollsRes] = await Promise.all([
+      const [profileRes, appointmentsRes, leaveRes, attendanceRes, certificatesRes, payrollsRes, documentsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/employees/${employeeId}`, { headers: authHeaders() }),
         fetch(`${API_BASE_URL}/appointments/me`, { headers: authHeaders() }),
         fetch(`${API_BASE_URL}/leave-balances?employeeId=${employeeId}`, { headers: authHeaders() }),
         fetch(`${API_BASE_URL}/attendances/me?yearMonth=${currentYearMonthString()}`, { headers: authHeaders() }),
         fetch(`${API_BASE_URL}/certificate-issues/me`, { headers: authHeaders() }),
         fetch(`${API_BASE_URL}/payrolls/me`, { headers: authHeaders() }),
+        fetch(`${API_BASE_URL}/employees/${employeeId}/documents`, { headers: authHeaders() }),
       ]);
 
       if (profileRes.ok) {
@@ -193,6 +205,10 @@ export default function MyProfile() {
       if (payrollsRes.ok) {
         const result: Payroll[] = await payrollsRes.json();
         setPayrolls([...result].sort((a, b) => b.payrollYearMonth.localeCompare(a.payrollYearMonth)));
+      }
+
+      if (documentsRes.ok) {
+        setDocuments(await documentsRes.json());
       }
     } catch (error) {
       console.error("Failed to fetch my profile data", error);
@@ -422,6 +438,14 @@ export default function MyProfile() {
                 <CurrencyDollarIcon className="w-4 h-4" />
                 급여 내역
               </button>
+              <button 
+                type="button"
+                onClick={() => setActiveTab("documents")}
+                className={`px-4 py-3 text-sm font-bold border-b-2 flex items-center gap-2 transition-colors ${activeTab === 'documents' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-300'}`}
+              >
+                <DocumentTextIcon className="w-4 h-4" />
+                첨부 서류
+              </button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-6 relative bg-white">
@@ -506,6 +530,35 @@ export default function MyProfile() {
                     ))}
                   </div>
                 )
+              )}
+
+              {activeTab === "documents" && (
+                <div className="space-y-3">
+                  {EMPLOYEE_DOCUMENT_TYPE_OPTIONS.map((docType) => {
+                    const document = documents.find((doc) => doc.documentType === docType.value);
+                    return (
+                      <div key={docType.value} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
+                        <div className="min-w-0 flex-1 flex items-center gap-4">
+                          <p className="text-sm font-bold text-gray-900 w-32 shrink-0">
+                            {docType.label} {docType.required ? <b className="text-rose-500">*</b> : null}
+                          </p>
+                          {document ? (
+                            <a
+                              href={`${FILE_ORIGIN}${document.attachmentUrl}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="truncate text-sm font-semibold text-blue-600 hover:underline"
+                            >
+                              {document.attachmentName}
+                            </a>
+                          ) : (
+                            <p className="text-sm text-gray-400 font-medium">미제출</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

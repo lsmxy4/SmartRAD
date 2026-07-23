@@ -443,6 +443,7 @@ export default function PayrollCalculatePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [detailState, setDetailState] = useState<DetailModalState | null>(null);
   const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -603,16 +604,6 @@ export default function PayrollCalculatePage() {
     setAppliedFilters(initialFilters);
   };
 
-  const showReviewTargets = () => {
-    setDraftFilters((current) => ({ ...current, reviewStatus: "검토필요" }));
-    setAppliedFilters((current) => ({ ...current, reviewStatus: "검토필요" }));
-    requestAnimationFrame(() => {
-      document
-        .getElementById("payroll-result-section")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  };
-
   const confirmSelected = async () => {
     if (selectedRows.length === 0) {
       window.alert("선택된 항목이 없습니다.");
@@ -764,7 +755,7 @@ export default function PayrollCalculatePage() {
     },
     {
       label: "근태 반영 기간",
-      value: "백엔드 계산 기준",
+      value: "전체 계산 기준",
       icon: CalendarDaysIcon,
     },
     {
@@ -777,7 +768,7 @@ export default function PayrollCalculatePage() {
     {
       title: "계산 대상",
       value: `${payrollRows.length.toLocaleString("ko-KR")}명`,
-      description: "백엔드 급여대장 기준",
+      description: "전체 급여대장 기준",
       icon: UserGroupIcon,
       className: "border-slate-200 bg-white",
       iconClassName: "bg-slate-50 text-slate-500",
@@ -928,23 +919,25 @@ export default function PayrollCalculatePage() {
         ))}
       </section>
 
-      <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
-        <span className="inline-flex items-center gap-2">
-          <ExclamationTriangleIcon className="h-5 w-5" />
-          급여 계산 결과 중 확인이 필요한 직원이{" "}
-          {reviewCount.toLocaleString("ko-KR")}명 있습니다.
-          <span className="hidden text-xs font-medium md:inline">
-            근태 누락 또는 급여 기준정보를 확인해주세요.
+      {reviewCount > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
+          <span className="inline-flex items-center gap-2">
+            <ExclamationTriangleIcon className="h-5 w-5" />
+            급여 계산 결과 중 확인이 필요한 직원이{" "}
+            {reviewCount.toLocaleString("ko-KR")}명 있습니다.
+            <span className="hidden text-xs font-medium md:inline">
+              근태 누락 또는 급여 기준정보를 확인해주세요.
+            </span>
           </span>
-        </span>
-        <button
-          type="button"
-          onClick={showReviewTargets}
-          className="font-bold text-orange-600 hover:text-orange-700"
-        >
-          검토 대상 보기 ›
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setReviewModalOpen(true)}
+            className="font-bold text-orange-600 hover:text-orange-700"
+          >
+            검토 대상 보기 ›
+          </button>
+        </div>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))_1.4fr_auto_auto]">
@@ -1102,7 +1095,7 @@ export default function PayrollCalculatePage() {
                     colSpan={14}
                     className="px-4 py-12 text-center font-semibold text-slate-400"
                   >
-                    백엔드에서 급여 계산 결과를 불러오는 중입니다.
+                    급여 계산 결과를 불러오는 중입니다.
                   </td>
                 </tr>
               )}
@@ -1245,6 +1238,41 @@ export default function PayrollCalculatePage() {
       )}
       {criteriaModalOpen && (
         <PayrollCriteriaModal onClose={() => setCriteriaModalOpen(false)} />
+      )}
+      {reviewModalOpen && (
+        <Modal
+          icon={ExclamationTriangleIcon}
+          title="검토 필요 직원 목록"
+          subtitle={`급여 계산 결과 중 확인이 필요한 직원이 ${payrollRows.filter(r => r.reviewStatus === "검토필요").length}명 있습니다.`}
+          onClose={() => setReviewModalOpen(false)}
+          maxWidth="xl"
+          footer={
+            <ModalCancelButton onClick={() => setReviewModalOpen(false)}>닫기</ModalCancelButton>
+          }
+        >
+          <div className="max-h-[60vh] overflow-y-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">사번</th>
+                  <th className="px-4 py-3 font-medium">이름</th>
+                  <th className="px-4 py-3 font-medium">부서</th>
+                  <th className="px-4 py-3 font-medium">지급총액</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payrollRows.filter(r => r.reviewStatus === "검토필요").map(row => (
+                  <tr key={row.payrollId}>
+                    <td className="px-4 py-3 text-slate-600">{row.employeeNo}</td>
+                    <td className="px-4 py-3 font-bold">{row.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.department}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.grossPay}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/commo
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
-type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 type StatusFilter = "ALL" | LeaveStatus;
 
 interface LeaveRequestResponse {
@@ -53,15 +53,15 @@ const filters: { value: StatusFilter; label: string }[] = [
   { value: "PENDING", label: "승인 대기" },
   { value: "APPROVED", label: "승인 완료" },
   { value: "REJECTED", label: "반려" },
-  { value: "CANCELLED", label: "신청 취소" },
+  { value: "CANCELED", label: "취소" },
 ];
 
-const statusLabel: Record<LeaveStatus, string> = { PENDING: "승인 대기", APPROVED: "승인 완료", REJECTED: "반려", CANCELLED: "신청 취소" };
+const statusLabel: Record<LeaveStatus, string> = { PENDING: "승인 대기", APPROVED: "승인 완료", REJECTED: "반려", CANCELED: "취소" };
 const statusStyle: Record<LeaveStatus, string> = {
   PENDING: "bg-amber-50 text-amber-700 ring-amber-200",
   APPROVED: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   REJECTED: "bg-rose-50 text-rose-700 ring-rose-200",
-  CANCELLED: "bg-gray-100 text-gray-600 ring-gray-200",
+  CANCELED: "bg-gray-50 text-gray-700 ring-gray-200",
 };
 
 function authHeaders(json = false): HeadersInit {
@@ -240,7 +240,7 @@ export default function MyLeavePage() {
       title="휴가 신청 상세"
       onClose={() => setDetail(null)}
       maxWidth="lg"
-      footer={<>{detail.status === "PENDING" && <ModalPrimaryButton tone="rose" onClick={() => setCancelTarget(detail)}>신청 취소</ModalPrimaryButton>}<ModalCancelButton onClick={() => setDetail(null)}>닫기</ModalCancelButton></>}
+      footer={<>{(detail.status === "PENDING" || detail.status === "APPROVED") && <ModalPrimaryButton tone="rose" onClick={() => setCancelTarget(detail)}>신청 취소</ModalPrimaryButton>}<ModalCancelButton onClick={() => setDetail(null)}>닫기</ModalCancelButton></>}
     >
       <div className="grid grid-cols-2 gap-4 text-sm">{[["휴가 유형", detail.leaveTypeName], ["신청 기간", period(detail)], ["사용 일수", days(detail.leaveDays)], ["신청일", formatDate(detail.createdAt)], ["처리일", formatDateTime(detail.processedAt)]].map(([label, value]) => <div key={label}><p className="text-xs font-medium text-gray-500">{label}</p><p className="mt-1 font-semibold text-gray-800">{value}</p></div>)}<div><p className="text-xs font-medium text-gray-500">승인 상태</p><p className="mt-1"><StatusBadge status={detail.status} /></p></div></div><div><p className="text-xs font-medium text-gray-500">신청 사유</p><p className="mt-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{detail.reason || "-"}</p></div>{detail.rejectionReason && <div><p className="text-xs font-medium text-gray-500">반려 사유</p><p className="mt-1 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{detail.rejectionReason}</p></div>}
     </Modal>}

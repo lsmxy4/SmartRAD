@@ -198,6 +198,9 @@ export default function PayrollBasicPage() {
   const [bulkEmploymentTypeError, setBulkEmploymentTypeError] = useState("");
   const [bulkEmploymentTypeSaving, setBulkEmploymentTypeSaving] =
     useState(false);
+
+  const [unregisteredModalOpen, setUnregisteredModalOpen] = useState(false);
+
   const [bulkPayrollOpen, setBulkPayrollOpen] = useState(false);
   const [bulkPayrollItems, setBulkPayrollItems] = useState<BulkPayrollItem[]>(
     [],
@@ -280,13 +283,14 @@ export default function PayrollBasicPage() {
   const registeredCount = employees.filter(
     (employee) => employee.status === "등록완료",
   ).length;
-  const unregisteredCount = employees.length - registeredCount;
+  const unregisteredRows = employees.filter((employee) => employee.status === "미등록");
+  const unregisteredCount = unregisteredRows.length;
 
   const summaryCards = [
     {
       title: "급여 대상 직원",
       value: `${totalEmployees.toLocaleString("ko-KR")}명`,
-      description: "백엔드 직원 기준",
+      description: "전체 직원 기준",
       icon: UserGroupIcon,
       className: "border-gray-200 bg-white",
       iconClassName: "bg-slate-100 text-slate-600",
@@ -313,7 +317,7 @@ export default function PayrollBasicPage() {
     {
       title: "이번 달 변경",
       value: "-",
-      description: "백엔드 수정일 기준",
+      description: "최근 수정일 기준",
       icon: ArrowPathIcon,
       className: "border-gray-200 bg-white",
       iconClassName: "bg-emerald-50 text-emerald-600",
@@ -903,16 +907,22 @@ export default function PayrollBasicPage() {
         ))}
       </section>
 
-      <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-        <span className="inline-flex items-center gap-2">
-          <ExclamationTriangleIcon className="h-5 w-5" />
-          급여 기본정보가 등록되지 않은 직원이{" "}
-          {unregisteredCount.toLocaleString("ko-KR")}명 있습니다.
-        </span>
-        <button className="font-bold text-orange-600 hover:text-orange-700">
-          미등록 직원 보기 ›
-        </button>
-      </div>
+      {unregisteredCount > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          <span className="inline-flex items-center gap-2">
+            <ExclamationTriangleIcon className="h-5 w-5" />
+            급여 기본정보가 등록되지 않은 직원이{" "}
+            {unregisteredCount.toLocaleString("ko-KR")}명 있습니다.
+          </span>
+          <button 
+            type="button" 
+            onClick={() => setUnregisteredModalOpen(true)}
+            className="font-bold text-orange-600 hover:text-orange-700"
+          >
+            미등록 직원 보기 ›
+          </button>
+        </div>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_1.1fr_auto_auto]">
@@ -1041,7 +1051,7 @@ export default function PayrollBasicPage() {
                     colSpan={12}
                     className="px-4 py-12 text-center font-semibold text-slate-400"
                   >
-                    백엔드에서 급여 기본정보를 불러오는 중입니다.
+                    급여 기본정보를 불러오는 중입니다.
                   </td>
                 </tr>
               )}
@@ -1421,6 +1431,42 @@ export default function PayrollBasicPage() {
                   {bulkPayrollError}
                 </p>
               )}
+        </Modal>
+      )}
+
+      {unregisteredModalOpen && (
+        <Modal
+          icon={ExclamationTriangleIcon}
+          title="미등록 직원 목록"
+          subtitle={`총 ${unregisteredRows.length}명의 직원이 기본정보가 미등록 상태입니다.`}
+          onClose={() => setUnregisteredModalOpen(false)}
+          maxWidth="xl"
+          footer={
+            <ModalCancelButton onClick={() => setUnregisteredModalOpen(false)}>닫기</ModalCancelButton>
+          }
+        >
+          <div className="max-h-[60vh] overflow-y-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">사번</th>
+                  <th className="px-4 py-3 font-medium">이름</th>
+                  <th className="px-4 py-3 font-medium">부서</th>
+                  <th className="px-4 py-3 font-medium">고용형태</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {unregisteredRows.map(row => (
+                  <tr key={row.employeeId}>
+                    <td className="px-4 py-3 text-slate-600">{row.employeeNo}</td>
+                    <td className="px-4 py-3 font-bold">{row.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.department}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.payType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Modal>
       )}
     </div>

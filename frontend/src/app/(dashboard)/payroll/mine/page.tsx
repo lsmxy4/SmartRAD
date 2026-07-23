@@ -9,9 +9,9 @@ import {
   PrinterIcon,
   ReceiptPercentIcon,
   WalletIcon,
-  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useMemo, useState } from "react";
+import Modal, { ModalCancelButton } from "@/components/common/Modal";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 
@@ -69,8 +69,9 @@ export default function MyPayrollPage() {
   const [detail, setDetail] = useState<PayrollDetailedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -80,7 +81,6 @@ export default function MyPayrollPage() {
         const result = (await response.json()) as Payroll[];
         const sorted = [...result].sort((a, b) => b.payrollYearMonth.localeCompare(a.payrollYearMonth));
         setPayrolls(sorted);
-        setSelectedPayrollId(sorted[0]?.payrollId ?? null);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : "급여 명세서를 불러오지 못했습니다.");
       } finally {
@@ -90,8 +90,18 @@ export default function MyPayrollPage() {
     fetchPayrolls();
   }, []);
 
+  const handleOpenDetail = (id: number) => {
+    setSelectedPayrollId(id);
+    setDetailOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setDetail(null);
+  };
+
   useEffect(() => {
-    if (selectedPayrollId == null) return;
+    if (!detailOpen || selectedPayrollId == null) return;
     const fetchDetail = async () => {
       setDetailLoading(true);
       try {
@@ -105,9 +115,8 @@ export default function MyPayrollPage() {
       }
     };
     fetchDetail();
-  }, [selectedPayrollId]);
+  }, [detailOpen, selectedPayrollId]);
 
-  const selectedPayroll = payrolls.find((payroll) => payroll.payrollId === selectedPayrollId) ?? null;
   const earnings = useMemo(() => detail?.details.filter((item) => item.itemTypeCode === "EARNING") ?? [], [detail]);
   const deductions = useMemo(() => detail?.details.filter((item) => item.itemTypeCode === "DEDUCTION") ?? [], [detail]);
   const totalEarnings = detail?.payroll.totalPayAmount ?? 0;
@@ -140,11 +149,6 @@ export default function MyPayrollPage() {
     URL.revokeObjectURL(link.href);
   };
 
-  const openPayrollDetail = (payrollId: number) => {
-    setSelectedPayrollId(payrollId);
-    setShowDetailModal(true);
-  };
-
   return (
     <div className="payroll-statement-print mx-auto max-w-[1600px] space-y-4 text-slate-800">
       <section>
@@ -163,40 +167,93 @@ export default function MyPayrollPage() {
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div><h3 className="text-base font-bold text-slate-900">급여 명세서 목록</h3><p className="mt-0.5 text-sm text-slate-400">지급월을 선택하면 상세 내역을 확인할 수 있습니다.</p></div>
+          <div><h3 className="text-base font-bold text-slate-900">급여 명세서 목록</h3><p className="mt-0.5 text-sm text-slate-400">조회 버튼을 눌러 명세서를 미리보고 인쇄/저장할 수 있습니다.</p></div>
           <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-600">총 {payrolls.length}건</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="bg-slate-50 text-slate-500"><tr><th className="px-5 py-3 font-medium">지급 연월</th><th className="px-4 py-3 font-medium">지급일</th><th className="px-4 py-3 text-right font-medium">지급 합계</th><th className="px-4 py-3 text-right font-medium">공제 합계</th><th className="px-4 py-3 text-right font-medium">실수령액</th><th className="px-4 py-3 text-center font-medium">상태</th><th className="px-5 py-3 text-center font-medium">관리</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-400">급여 명세서를 불러오는 중입니다.</td></tr> : payrolls.length === 0 ? <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-400">조회 가능한 급여 명세서가 없습니다.</td></tr> : payrolls.map((payroll) => <tr key={payroll.payrollId} className={payroll.payrollId === selectedPayrollId ? "bg-indigo-50/60" : "hover:bg-slate-50"}><td className="px-5 py-3.5 font-semibold text-slate-700">{formatMonth(payroll.payrollYearMonth)}</td><td className="px-4 py-3.5 text-slate-500">{formatDate(payroll.paymentDate)}</td><td className="px-4 py-3.5 text-right font-semibold">{formatCurrency(payroll.totalPayAmount)}</td><td className="px-4 py-3.5 text-right font-semibold text-rose-500">-{formatCurrency(payroll.totalDeductionAmount)}</td><td className="px-4 py-3.5 text-right font-bold text-indigo-600">{formatCurrency(payroll.realPayAmount)}</td><td className="px-4 py-3.5 text-center"><span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-600">{statusLabel(payroll.payrollStatusCode)}</span></td><td className="px-5 py-3.5 text-center"><button type="button" onClick={() => openPayrollDetail(payroll.payrollId)} className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-600 hover:border-indigo-200 hover:text-indigo-600"><EyeIcon className="h-3.5 w-3.5" /> 조회</button></td></tr>)}
+              {loading ? <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-400">급여 명세서를 불러오는 중입니다.</td></tr> : payrolls.length === 0 ? <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-400">조회 가능한 급여 명세서가 없습니다.</td></tr> : payrolls.map((payroll) => <tr key={payroll.payrollId} className="hover:bg-slate-50"><td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-700">{formatMonth(payroll.payrollYearMonth)}</td><td className="whitespace-nowrap px-4 py-3.5 text-slate-500">{formatDate(payroll.paymentDate)}</td><td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold">{formatCurrency(payroll.totalPayAmount)}</td><td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold text-rose-500">-{formatCurrency(payroll.totalDeductionAmount)}</td><td className="whitespace-nowrap px-4 py-3.5 text-right font-bold text-indigo-600">{formatCurrency(payroll.realPayAmount)}</td><td className="px-4 py-3.5 text-center"><span className="whitespace-nowrap rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-600">{statusLabel(payroll.payrollStatusCode)}</span></td><td className="px-5 py-3.5 text-center"><button onClick={() => handleOpenDetail(payroll.payrollId)} className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-600 hover:border-indigo-200 hover:text-indigo-600"><EyeIcon className="h-3.5 w-3.5" /> 미리보기</button></td></tr>)}
             </tbody>
           </table>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2"><DocumentTextIcon className="h-5 w-5 text-indigo-500" /><div><h3 className="text-base font-bold text-slate-900">이번달 명세서 요약</h3><p className="text-sm text-slate-400">{selectedPayroll ? `${formatMonth(selectedPayroll.payrollYearMonth)} 급여 내역` : "급여 내역을 선택해주세요."}</p></div></div>{selectedPayroll && <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-sm font-bold text-indigo-600">{formatMonth(selectedPayroll.payrollYearMonth)} · {statusLabel(selectedPayroll.payrollStatusCode)}</span>}</div>
-        {detailLoading ? <div className="px-5 py-12 text-center text-base text-slate-400">상세 내역을 불러오는 중입니다.</div> : detail ? <div className="grid gap-0 lg:grid-cols-[1fr_1fr_1.05fr]"><StatementItems title="지급 내역" items={earnings} total={totalEarnings} totalLabel="지급 총액" /><StatementItems title="공제 내역" items={deductions} total={totalDeductions} totalLabel="공제 합계" negative /><div className="border-t border-slate-100 p-5 lg:border-l lg:border-t-0"><p className="text-base font-semibold text-slate-700">최종 정산</p><div className="mt-4 space-y-2 text-base"><div className="flex justify-between text-slate-500"><span>세전 총액</span><strong className="text-slate-800">{formatCurrency(totalEarnings)}</strong></div><div className="flex justify-between text-slate-500"><span>공제 합계</span><strong className="text-rose-500">-{formatCurrency(totalDeductions)}</strong></div></div><div className="mt-4 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-500 p-4 text-white"><p className="text-sm font-medium text-indigo-100">실수령액</p><p className="mt-1 text-3xl font-bold">{formatCurrency(netPay)}</p></div><div className="mt-3 grid gap-2"><button onClick={() => window.print()} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100"><PrinterIcon className="h-4 w-4" /> 명세서 인쇄</button><button onClick={downloadStatement} className="inline-flex items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-100"><DocumentArrowDownIcon className="h-4 w-4" /> 파일 저장</button></div></div></div> : <div className="px-5 py-12 text-center text-base text-slate-400">상세 내역을 선택해주세요.</div>}
-      </section>
-
-      {showDetailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="dialog" aria-modal="true" aria-labelledby="payroll-detail-title">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
-              <div>
-                <h2 id="payroll-detail-title" className="text-lg font-bold text-slate-900">급여 명세서 상세</h2>
-                <p className="mt-1 text-sm text-slate-500">{selectedPayroll ? `${formatMonth(selectedPayroll.payrollYearMonth)} 급여 내역` : "급여 내역"}</p>
+      {detailOpen && (
+        <Modal
+          icon={DocumentTextIcon}
+          title="급여 명세서 상세 미리보기"
+          subtitle={detail?.payroll ? `${formatMonth(detail.payroll.payrollYearMonth)} 급여 내역` : undefined}
+          onClose={handleCloseDetail}
+          maxWidth="2xl"
+          footer={
+            detail && (
+              <div className="flex w-full justify-between gap-3">
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => window.print()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <PrinterIcon className="h-4 w-4" /> 명세서 인쇄
+                  </button>
+                  <button type="button" onClick={downloadStatement} className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
+                    <DocumentArrowDownIcon className="h-4 w-4" /> 파일 저장
+                  </button>
+                </div>
+                <ModalCancelButton onClick={handleCloseDetail}>닫기</ModalCancelButton>
               </div>
-              <button type="button" onClick={() => setShowDetailModal(false)} aria-label="급여 명세서 상세 닫기" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><XMarkIcon className="h-5 w-5" /></button>
+            )
+          }
+        >
+          {detailLoading ? (
+            <div className="px-5 py-12 text-center text-base text-slate-400">상세 내역을 불러오는 중입니다.</div>
+          ) : detail ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-bold text-slate-700">지급 총액</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{formatCurrency(totalEarnings)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-sm font-bold text-slate-700">공제 합계</p>
+                  <p className="mt-1 text-2xl font-extrabold text-rose-500">-{formatCurrency(totalDeductions)}</p>
+                </div>
+              </div>
+              
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-bold text-slate-800">실수령액</h4>
+                  <span className="text-xl font-extrabold text-indigo-600">{formatCurrency(netPay)}</span>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <h5 className="mb-3 text-sm font-bold text-slate-700">지급 내역</h5>
+                    <ul className="space-y-2 text-sm">
+                      {earnings.length ? earnings.map((item) => (
+                        <li key={item.itemName} className="flex justify-between border-b border-slate-50 pb-2">
+                          <span className="text-slate-600">{item.itemName}</span>
+                          <span className="font-medium text-slate-900">{formatCurrency(item.amount)}</span>
+                        </li>
+                      )) : <li className="text-slate-400">항목 없음</li>}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="mb-3 text-sm font-bold text-slate-700">공제 내역</h5>
+                    <ul className="space-y-2 text-sm">
+                      {deductions.length ? deductions.map((item) => (
+                        <li key={item.itemName} className="flex justify-between border-b border-slate-50 pb-2">
+                          <span className="text-slate-600">{item.itemName}</span>
+                          <span className="font-medium text-rose-500">-{formatCurrency(item.amount)}</span>
+                        </li>
+                      )) : <li className="text-slate-400">항목 없음</li>}
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
-            {detailLoading ? <div className="px-6 py-16 text-center text-sm text-slate-400">상세 내역을 불러오는 중입니다.</div> : detail ? <div className="p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-4 py-3"><div><p className="text-xs text-slate-500">지급일</p><p className="mt-1 text-sm font-bold text-slate-700">{formatDate(detail.payroll.paymentDate)}</p></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-600">{statusLabel(detail.payroll.payrollStatusCode)}</span></div><div className="grid overflow-hidden rounded-lg border border-slate-200 md:grid-cols-2"><StatementItems title="지급 내역" items={earnings} total={totalEarnings} totalLabel="지급 총액" /><StatementItems title="공제 내역" items={deductions} total={totalDeductions} totalLabel="공제 합계" negative /></div><div className="mt-5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-500 p-5 text-white"><p className="text-sm font-medium text-indigo-100">실수령액</p><p className="mt-1 text-3xl font-bold">{formatCurrency(netPay)}</p></div></div> : <div className="px-6 py-16 text-center text-sm text-slate-400">표시할 급여 상세 내역이 없습니다.</div>}
-            <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4"><button type="button" onClick={() => setShowDetailModal(false)} className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">닫기</button></div>
-          </div>
-        </div>
+          ) : (
+            <div className="px-5 py-12 text-center text-base text-slate-400">상세 내역을 선택해주세요.</div>
+          )}
+        </Modal>
       )}
-      
     </div>
   );
 }
@@ -204,8 +261,4 @@ export default function MyPayrollPage() {
 function SummaryCard({ label, value, caption, icon: Icon, tone }: { label: string; value: string; caption: string; icon: typeof WalletIcon; tone: "indigo" | "emerald" | "rose" | "violet" }) {
   const colors = { indigo: "bg-indigo-50 text-indigo-500", emerald: "bg-emerald-50 text-emerald-500", rose: "bg-rose-50 text-rose-500", violet: "bg-violet-50 text-violet-500" };
   return <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-start justify-between"><div><p className="text-sm font-medium text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p><p className="mt-1 text-xs text-slate-400">{caption}</p></div><span className={`rounded-full p-3 ${colors[tone]}`}><Icon className="h-5 w-5" /></span></div></div>;
-}
-
-function StatementItems({ title, items, total, totalLabel, negative = false }: { title: string; items: PayrollDetail[]; total: number; totalLabel: string; negative?: boolean }) {
-  return <div className="border-b border-slate-100 p-5 lg:border-b-0 lg:border-r"><p className="text-base font-semibold text-slate-700">{title}</p><div className="mt-4 space-y-2 text-sm">{items.length ? items.map((item) => <div key={`${item.itemName}-${item.amount}`} className="flex justify-between"><span className="text-slate-500">{item.itemName}</span><strong className={negative ? "text-rose-500" : "text-slate-800"}>{negative && "-"}{formatCurrency(item.amount)}</strong></div>) : <p className="text-slate-400">등록된 항목이 없습니다.</p>}</div><div className={`mt-4 flex justify-between rounded-md px-3 py-2 text-sm font-bold ${negative ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-700"}`}><span>{totalLabel}</span><span>{negative && "-"}{formatCurrency(total)}</span></div></div>;
 }

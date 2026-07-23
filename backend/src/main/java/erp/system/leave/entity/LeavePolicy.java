@@ -45,4 +45,11 @@ public class LeavePolicy extends CreatedAtEntity {
         this.halfDayAllowed = halfDayAllowed;
         this.note = note;
     }
+
+    public void update(BigDecimal annualLeaveDays, BigDecimal maxCarryOverDays, boolean halfDayAllowed, String note) {
+        this.annualLeaveDays = annualLeaveDays;
+        this.maxCarryOverDays = maxCarryOverDays;
+        this.halfDayAllowed = halfDayAllowed;
+        this.note = note;
+    }
 }

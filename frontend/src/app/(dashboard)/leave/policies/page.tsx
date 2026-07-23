@@ -39,6 +39,7 @@ export default function LeavePoliciesPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [showModal, setShowModal] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<LeavePolicy | null>(null);
   const [positionId, setPositionId] = useState("");
   const [annualLeaveDays, setAnnualLeaveDays] = useState("15");
   const [maxCarryOverDays, setMaxCarryOverDays] = useState("5");
@@ -73,12 +74,22 @@ export default function LeavePoliciesPage() {
     (position) => !policies.some((policy) => policy.positionId === position.positionId),
   );
 
-  const openModal = () => {
-    setPositionId(availablePositions[0] ? String(availablePositions[0].positionId) : "");
-    setAnnualLeaveDays("15");
-    setMaxCarryOverDays("5");
-    setHalfDayAllowed(true);
-    setNote("");
+  const openModal = (policy?: LeavePolicy) => {
+    if (policy) {
+      setEditingPolicy(policy);
+      setPositionId(String(policy.positionId));
+      setAnnualLeaveDays(String(policy.annualLeaveDays ?? 0));
+      setMaxCarryOverDays(String(policy.maxCarryOverDays ?? 0));
+      setHalfDayAllowed(policy.halfDayAllowed);
+      setNote(policy.note ?? "");
+    } else {
+      setEditingPolicy(null);
+      setPositionId(availablePositions[0] ? String(availablePositions[0].positionId) : "");
+      setAnnualLeaveDays("15");
+      setMaxCarryOverDays("5");
+      setHalfDayAllowed(true);
+      setNote("");
+    }
     setModalError("");
     setShowModal(true);
   };
@@ -100,7 +111,7 @@ export default function LeavePoliciesPage() {
     }
   };
 
-  const handleCreate = async () => {
+  const handleSubmit = async () => {
     if (!positionId) {
       setModalError("직책을 선택해주세요.");
       return;
@@ -108,8 +119,13 @@ export default function LeavePoliciesPage() {
     setSaving(true);
     setModalError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/leave-policies`, {
-        method: "POST",
+      const url = editingPolicy
+        ? `${API_BASE_URL}/leave-policies/${editingPolicy.leavePolicyId}`
+        : `${API_BASE_URL}/leave-policies`;
+      const method = editingPolicy ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           positionId: Number(positionId),
@@ -121,12 +137,12 @@ export default function LeavePoliciesPage() {
       });
       if (!res.ok) {
         const body: ErrorResponse = await res.json();
-        throw new Error(body.message || "휴가정책 등록에 실패했습니다.");
+        throw new Error(body.message || `휴가정책 ${editingPolicy ? "수정" : "등록"}에 실패했습니다.`);
       }
       setShowModal(false);
       await fetchAll();
     } catch (error) {
-      setModalError(error instanceof Error ? error.message : "휴가정책 등록에 실패했습니다.");
+      setModalError(error instanceof Error ? error.message : `휴가정책 ${editingPolicy ? "수정" : "등록"}에 실패했습니다.`);
     } finally {
       setSaving(false);
     }
@@ -141,7 +157,7 @@ export default function LeavePoliciesPage() {
         </div>
         <button
           type="button"
-          onClick={openModal}
+          onClick={() => openModal()}
           disabled={availablePositions.length === 0}
           className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -184,13 +200,22 @@ export default function LeavePoliciesPage() {
                   <td className="px-4 py-3 text-slate-600">{policy.halfDayAllowed ? "가능" : "불가"}</td>
                   <td className="px-4 py-3 text-slate-500">{policy.note ?? "-"}</td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => deletePolicy(policy)}
-                      className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                    >
-                      삭제
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openModal(policy)}
+                        className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        수정
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deletePolicy(policy)}
+                        className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -202,68 +227,75 @@ export default function LeavePoliciesPage() {
       {showModal && (
         <Modal
           icon={CalendarDaysIcon}
-          title="휴가정책 등록"
+          title={editingPolicy ? "휴가정책 수정" : "휴가정책 등록"}
           onClose={() => setShowModal(false)}
           footer={<>
             <ModalCancelButton onClick={() => setShowModal(false)} />
-            <ModalPrimaryButton onClick={handleCreate} disabled={saving}>{saving ? "저장 중..." : "저장"}</ModalPrimaryButton>
+            <ModalPrimaryButton onClick={handleSubmit} disabled={saving}>{saving ? "저장 중..." : "저장"}</ModalPrimaryButton>
           </>}
         >
-          <label className="space-y-1 text-sm font-semibold text-slate-700">
-            <span>직책</span>
-            <select
-              value={positionId}
-              onChange={(event) => setPositionId(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
-            >
-              {availablePositions.map((position) => (
-                <option key={position.positionId} value={position.positionId}>
-                  {position.positionName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-1 text-sm font-semibold text-slate-700">
-              <span>연차 발생일수</span>
+          <div className="space-y-5 py-2 px-1">
+            <label className="block space-y-1.5 text-sm font-semibold text-slate-700">
+              <span>직책</span>
+              <select
+                value={positionId}
+                onChange={(event) => setPositionId(event.target.value)}
+                disabled={!!editingPolicy}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-500"
+              >
+                {editingPolicy ? (
+                  <option value={editingPolicy.positionId || ""}>{editingPolicy.positionName}</option>
+                ) : (
+                  availablePositions.map((position) => (
+                    <option key={position.positionId} value={position.positionId}>
+                      {position.positionName}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-5">
+              <label className="block space-y-1.5 text-sm font-semibold text-slate-700">
+                <span>연차 발생일수</span>
+                <input
+                  value={annualLeaveDays}
+                  onChange={(event) => setAnnualLeaveDays(event.target.value)}
+                  inputMode="numeric"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+                />
+              </label>
+              <label className="block space-y-1.5 text-sm font-semibold text-slate-700">
+                <span>이월 한도</span>
+                <input
+                  value={maxCarryOverDays}
+                  onChange={(event) => setMaxCarryOverDays(event.target.value)}
+                  inputMode="numeric"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+                />
+              </label>
+            </div>
+            <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 py-1">
               <input
-                value={annualLeaveDays}
-                onChange={(event) => setAnnualLeaveDays(event.target.value)}
-                inputMode="numeric"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                type="checkbox"
+                checked={halfDayAllowed}
+                onChange={(event) => setHalfDayAllowed(event.target.checked)}
+                className="h-4.5 w-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+              />
+              반차 허용
+            </label>
+            <label className="block space-y-1.5 text-sm font-semibold text-slate-700">
+              <span>비고</span>
+              <input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+                placeholder="선택 입력"
               />
             </label>
-            <label className="space-y-1 text-sm font-semibold text-slate-700">
-              <span>이월 한도</span>
-              <input
-                value={maxCarryOverDays}
-                onChange={(event) => setMaxCarryOverDays(event.target.value)}
-                inputMode="numeric"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
-              />
-            </label>
+            {modalError && (
+              <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 mt-2">{modalError}</p>
+            )}
           </div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <input
-              type="checkbox"
-              checked={halfDayAllowed}
-              onChange={(event) => setHalfDayAllowed(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-            />
-            반차 허용
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-slate-700">
-            <span>비고</span>
-            <input
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
-              placeholder="선택 입력"
-            />
-          </label>
-          {modalError && (
-            <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">{modalError}</p>
-          )}
         </Modal>
       )}
     </div>

@@ -3,23 +3,15 @@
 import { useEffect, useState } from "react";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/common/Modal";
-import { EMPLOYEE_DOCUMENT_TYPE_OPTIONS } from "@/components/employee/documentTypes";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
-const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function authHeaders(): HeadersInit {
   const token = window.localStorage.getItem("accessToken") ?? window.sessionStorage.getItem("accessToken");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-type EmployeeDocument = {
-  employeeDocumentId: number;
-  documentType: string;
-  attachmentUrl: string;
-  attachmentName: string;
-  createdAt: string;
-};
+
 
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "재직", selectedClasses: "border-emerald-500 bg-emerald-50 text-emerald-600" },
@@ -42,65 +34,10 @@ export default function EmployeeEditModal({ employee, onClose, onSave }: any) {
   });
 
   const [loading, setLoading] = useState(false);
-  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
-  const [uploadingType, setUploadingType] = useState<string | null>(null);
 
-  const fetchDocuments = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/employees/${employee.employeeId}/documents`, { headers: authHeaders() });
-      if (res.ok) {
-        setDocuments(await res.json());
-      }
-    } catch (error) {
-      console.error("Failed to fetch employee documents", error);
-    }
-  };
 
-  useEffect(() => {
-    fetchDocuments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee.employeeId]);
 
-  const handleDocumentUpload = async (documentType: string, file: File) => {
-    setUploadingType(documentType);
-    try {
-      const formData = new FormData();
-      formData.append("documentType", documentType);
-      formData.append("file", file);
-      const res = await fetch(`${API_BASE_URL}/employees/${employee.employeeId}/documents`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: formData,
-      });
-      if (res.ok) {
-        await fetchDocuments();
-      } else {
-        alert("서류 업로드에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("서류 업로드 중 오류가 발생했습니다.");
-    } finally {
-      setUploadingType(null);
-    }
-  };
 
-  const handleDocumentDelete = async (documentId: number) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/employees/${employee.employeeId}/documents/${documentId}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        setDocuments((current) => current.filter((document) => document.employeeDocumentId !== documentId));
-      } else {
-        alert("서류 삭제에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("서류 삭제 중 오류가 발생했습니다.");
-    }
-  };
 
   const handleChange = (e: any) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -209,63 +146,7 @@ export default function EmployeeEditModal({ employee, onClose, onSave }: any) {
               </div>
             </div>
 
-            <div className="border border-gray-100 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-100">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">첨부 서류</h3>
-              </div>
-              <div className="p-4 space-y-2">
-                {EMPLOYEE_DOCUMENT_TYPE_OPTIONS.map((docType) => {
-                  const document = documents.find((doc) => doc.documentType === docType.value);
-                  const uploading = uploadingType === docType.value;
-                  return (
-                    <div key={docType.value} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-gray-700">
-                          {docType.label} {docType.required ? <b className="text-rose-500">*</b> : null}
-                        </p>
-                        {document ? (
-                          <a
-                            href={`${FILE_ORIGIN}${document.attachmentUrl}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 block truncate text-xs font-semibold text-blue-600 hover:underline"
-                          >
-                            {document.attachmentName}
-                          </a>
-                        ) : (
-                          <p className="mt-1 text-xs text-gray-400">미제출</p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <label className="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-50">
-                          {uploading ? "업로드 중..." : document ? "재업로드" : "파일 선택"}
-                          <input
-                            type="file"
-                            disabled={uploading}
-                            className="hidden"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              event.target.value = "";
-                              if (file) void handleDocumentUpload(docType.value, file);
-                            }}
-                          />
-                        </label>
-                        {document ? (
-                          <button
-                            type="button"
-                            onClick={() => handleDocumentDelete(document.employeeDocumentId)}
-                            className="text-rose-400 hover:text-rose-600"
-                            aria-label={`${docType.label} 삭제`}
-                          >
-                            ×
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+
 
             <div className="border border-gray-100 rounded-lg overflow-hidden">
               <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-100">
