@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UserIcon, BuildingOfficeIcon, BriefcaseIcon, IdentificationIcon, EnvelopeIcon, PhoneIcon, HomeIcon, ClockIcon, CheckBadgeIcon, PencilSquareIcon, DocumentTextIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline";
 import { getEmployeeStatusLabel, getEmployeeStatusBadgeClasses } from "@/lib/employeeStatus";
 import { certificateTypeLabel, statusBadge, type CertificateIssueResponse } from "@/components/certificate/types";
 import Modal, { ModalCancelButton, ModalPrimaryButton } from "@/components/common/Modal";
 import { EMPLOYEE_DOCUMENT_TYPE_OPTIONS } from "@/components/employee/documentTypes";
+
+declare global {
+  interface Window {
+    daum?: {
+      Postcode: new (options: {
+        oncomplete: (data: { roadAddress: string; jibunAddress: string; zonecode: string }) => void;
+        width?: string | number;
+        height?: string | number;
+      }) => { embed: (element: HTMLElement) => void };
+    };
+  }
+}
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api";
 const FILE_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -151,13 +163,16 @@ export default function MyProfile() {
   
   const [activeTab, setActiveTab] = useState<TabType>("appointments");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState<{ phone: string; email: string; address: string; profileImage: string | null }>({
+  const [editForm, setEditForm] = useState<{ phone: string; email: string; address: string; addressDetail: string; profileImage: string | null }>({
     phone: "",
     email: "",
     address: "",
+    addressDetail: "",
     profileImage: null,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [addressSearchOpen, setAddressSearchOpen] = useState(false);
+  const addressLayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const employeeId = window.localStorage.getItem("employeeId") ?? window.sessionStorage.getItem("employeeId");
@@ -184,7 +199,7 @@ export default function MyProfile() {
       if (profileRes.ok) {
         const data = await profileRes.json();
         setProfile(data);
-        setEditForm({ phone: data.phone || "", email: data.email || "", address: data.address || "", profileImage: data.profileImage || null });
+        setEditForm({ phone: data.phone || "", email: data.email || "", address: data.address || "", addressDetail: "", profileImage: data.profileImage || null });
       }
       if (appointmentsRes.ok) setAppointments(await appointmentsRes.json());
 
@@ -217,6 +232,37 @@ export default function MyProfile() {
     }
   };
 
+  useEffect(() => {
+    if (document.getElementById("daum-postcode-script")) return;
+    const script = document.createElement("script");
+    script.id = "daum-postcode-script";
+    script.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!addressSearchOpen || !addressLayerRef.current || !window.daum?.Postcode) return;
+    addressLayerRef.current.innerHTML = "";
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        setEditForm((prev) => ({ ...prev, address: data.roadAddress || data.jibunAddress }));
+        setAddressSearchOpen(false);
+        document.getElementById("addressDetail")?.focus();
+      },
+      width: "100%",
+      height: "100%",
+    }).embed(addressLayerRef.current);
+  }, [addressSearchOpen]);
+
+  const openAddressSearch = () => {
+    if (!window.daum?.Postcode) {
+      window.alert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    setAddressSearchOpen(true);
+  };
+
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -238,7 +284,9 @@ export default function MyProfile() {
         birthDate: profile.birthDate,
         phone: editForm.phone,
         email: editForm.email,
-        address: editForm.address,
+        address: editForm.address
+          ? `${editForm.address}${editForm.addressDetail ? ` ${editForm.addressDetail}` : ""}`
+          : editForm.address,
         hireDate: profile.hireDate,
         resignationDate: profile.resignationDate,
         employeeStatusCode: profile.employeeStatusCode,
@@ -632,16 +680,56 @@ export default function MyProfile() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">자택 주소</label>
-                  <input 
-                    type="text" 
-                    value={editForm.address}
-                    onChange={(e) => setEditForm({...editForm, address: e.target.value})}
-                    placeholder="거주지 주소 입력"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  <div className="flex gap-2">
+                    <div className="flex h-9 flex-1 items-center rounded-md border border-gray-300 bg-gray-50 px-3 text-sm">
+                      <span className={editForm.address ? "text-gray-900" : "text-gray-400"}>
+                        {editForm.address || "주소 검색 버튼을 눌러주세요"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openAddressSearch}
+                      className="h-9 shrink-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-600 hover:border-blue-300 hover:text-blue-600"
+                    >
+                      주소 검색
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    id="addressDetail"
+                    value={editForm.addressDetail}
+                    onChange={(e) => setEditForm({...editForm, addressDetail: e.target.value})}
+                    placeholder="상세주소 (선택)"
+                    className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
         </Modal>
       )}
+
+      {addressSearchOpen ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
+          onClick={() => setAddressSearchOpen(false)}
+        >
+          <div
+            className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <h3 className="text-sm font-bold text-gray-900">주소 검색</h3>
+              <button
+                type="button"
+                onClick={() => setAddressSearchOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="주소 검색 닫기"
+              >
+                ×
+              </button>
+            </div>
+            <div ref={addressLayerRef} className="h-[450px] w-full" />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
