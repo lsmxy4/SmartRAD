@@ -67,7 +67,7 @@ export default function MyEventSupportPage() {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto p-6 space-y-6">
+    <div className="max-w-[1600px] mx-auto space-y-5 p-0 sm:space-y-6 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">경조비 신청</h1>
@@ -76,7 +76,7 @@ export default function MyEventSupportPage() {
         <button
           onClick={() => setShowModal(true)}
           disabled={!employeeId}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
         >
           <GiftIcon className="w-5 h-5" />
           경조비 신청
@@ -91,7 +91,7 @@ export default function MyEventSupportPage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-left border-collapse min-w-[860px]">
             <thead className="bg-gray-50/50 text-sm text-gray-500 font-medium border-b border-gray-200">
               <tr>
@@ -165,6 +165,24 @@ export default function MyEventSupportPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="divide-y divide-gray-100 sm:hidden">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-gray-500"><ArrowPathIcon className="h-5 w-5 animate-spin" />내역을 불러오는 중입니다...</div>
+          ) : error ? (
+            <p className="px-4 py-12 text-center text-sm text-rose-500">{error}</p>
+          ) : data.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-12 text-center text-gray-500"><GiftIcon className="mb-3 h-12 w-12 text-gray-300" /><p className="mb-1 text-base font-medium text-gray-900">신청 내역이 없습니다</p><p className="text-sm">상단 버튼을 눌러 경조비를 신청해보세요.</p></div>
+          ) : data.map((row) => {
+            const badge = eventStatusBadge(row.status);
+            return (
+              <article key={row.eventSupportId} className="space-y-3 px-4 py-4">
+                <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-gray-900">{eventTypeLabel(row.eventType)}</p><p className="mt-0.5 text-xs text-gray-500">신청일 {row.createdAt.substring(0, 10)} · 경조일 {row.eventDate}</p></div><div className="flex shrink-0 items-center gap-1.5">{getStatusIcon(row.status)}<span className={`rounded-full px-2 py-1 text-xs font-semibold ${badge.className}`}>{badge.label}</span></div></div>
+                <dl className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-3 text-xs"><div><dt className="text-gray-400">지원 금액</dt><dd className="mt-1 font-semibold text-gray-900">{formatAmount(getPolicyAmount(row.eventType))}</dd></div><div><dt className="text-gray-400">사유</dt><dd className="mt-1 break-words text-gray-700">{row.reason || "-"}</dd></div></dl>
+                {(row.status === "REJECTED" && row.rejectionReason) || row.attachmentUrl ? <div className="flex flex-wrap gap-2">{row.status === "REJECTED" && row.rejectionReason && <button onClick={() => setReasonModal({ title: "반려 사유", content: row.rejectionReason! })} className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-600">반려사유</button>}{row.attachmentUrl && <a href={resolveFileUrl(row.attachmentUrl)} target="_blank" rel="noreferrer" className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600">첨부파일</a>}</div> : null}
+              </article>
+            );
+          })}
         </div>
       </div>
 
